@@ -1,4 +1,4 @@
-"""CLI entry point for toolglass."""
+"""CLI entry point for loopprism."""
 
 from typing import Optional
 
@@ -13,8 +13,8 @@ from ..proxy.server import ProxyServer
 from ..api.app import create_app
 
 app = typer.Typer(
-    name="toolglass",
-    help="Looking glass for your AI tools.",
+    name="loopprism",
+    help="See what your agents actually do.",
     invoke_without_command=True,
 )
 
@@ -29,7 +29,7 @@ def _version_callback(
     ),
 ) -> None:
     if version:
-        typer.echo(f"toolglass {__version__}")
+        typer.echo(f"loopprism {__version__}")
         raise typer.Exit()
 
 
@@ -48,7 +48,7 @@ def proxy(
         help="Dashboard port.",
     ),
     db_path: str = typer.Option(
-        "~/.toolglass/traces.db",
+        config.db_path,
         "--db",
         help="SQLite database path.",
     ),
@@ -107,7 +107,7 @@ def proxy(
 
     panel = Panel(
         table,
-        title="[bold]toolglass[/] — Looking glass for your AI tools",
+        title="[bold]LoopPrism[/] — See what your agents actually do",
         border_style="cyan",
     )
     console.print()
@@ -156,7 +156,7 @@ def proxy(
 def analyze(
     trace_id: str = typer.Argument(..., help="Trace ID to analyze."),
     db_path: str = typer.Option(
-        "~/.toolglass/traces.db",
+        config.db_path,
         "--db",
         help="SQLite database path.",
     ),
@@ -213,7 +213,7 @@ def dashboard(
         help="Dashboard port.",
     ),
     db_path: str = typer.Option(
-        "~/.toolglass/traces.db",
+        config.db_path,
         "--db",
         help="SQLite database path.",
     ),

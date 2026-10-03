@@ -1,4 +1,4 @@
-"""Shared test fixtures for toolglass."""
+"""Shared test fixtures for loopprism."""
 
 import asyncio
 import json
@@ -28,7 +28,7 @@ def db_path():
 @pytest.fixture
 async def collector(db_path):
     """Create an initialized TraceCollector."""
-    from toolglass.trace.collector import TraceCollector
+    from loopprism.trace.collector import TraceCollector
 
     c = TraceCollector(db_path)
     await c.initialize()

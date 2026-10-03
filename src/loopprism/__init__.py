@@ -1,4 +1,4 @@
-"""toolglass — Looking glass for your AI tools."""
+"""loopprism — See what your agents actually do."""
 
 from .__version__ import __version__
 

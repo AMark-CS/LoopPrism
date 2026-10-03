@@ -169,7 +169,7 @@ class ProxyServer:
         if not path:
             return JSONResponse(
                 {
-                    "toolglass": "proxy",
+                    "loopprism": "proxy",
                     "message": "No MCP server specified in path",
                     "example": f"http://localhost:{self.port}/<server-name>",
                 },
@@ -218,7 +218,7 @@ class ProxyServer:
         Priority:
         1. Explicit backend_map entry
         2. ?backend= query parameter
-        3. X-Toolglass-Backend header
+        3. X-LoopPrism-Backend header
         """
         # Query parameter
         backend = request.query_params.get("backend")
@@ -227,7 +227,7 @@ class ProxyServer:
             return backend
 
         # Header
-        backend = request.headers.get("X-Toolglass-Backend")
+        backend = request.headers.get("X-LoopPrism-Backend") or request.headers.get("X-Toolglass-Backend")
         if backend:
             self.backend_map[server_name] = backend
             return backend

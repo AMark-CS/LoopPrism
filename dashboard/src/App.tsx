@@ -33,7 +33,7 @@ export default function App() {
         <div className="flex items-center gap-2">
           <Activity className="h-5 w-5 text-[var(--color-primary)]" />
           <span className="text-sm font-semibold tracking-tight text-[var(--color-foreground)]">
-            toolglass
+            LoopPrism
           </span>
           <span className="text-xs text-[var(--color-muted-foreground)]">
             Looking glass for your AI tools

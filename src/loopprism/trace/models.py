@@ -1,4 +1,4 @@
-"""SQLite data models for toolglass traces and spans."""
+"""SQLite data models for loopprism traces and spans."""
 
 from datetime import datetime
 from typing import Optional

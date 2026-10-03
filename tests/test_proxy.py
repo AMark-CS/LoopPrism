@@ -5,8 +5,8 @@ import json
 import httpx
 import pytest
 
-from toolglass.proxy.http_handler import MCPHttpHandler
-from toolglass.trace.collector import TraceCollector
+from loopprism.proxy.http_handler import MCPHttpHandler
+from loopprism.trace.collector import TraceCollector
 
 
 class TestMCPHttpProxy:

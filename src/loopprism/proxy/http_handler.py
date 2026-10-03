@@ -111,7 +111,7 @@ class MCPHttpHandler:
         """Handle a traceable MCP request with span creation."""
 
         # Determine trace ID (from header or new)
-        trace_id = request.headers.get("X-Toolglass-Trace-Id", str(uuid.uuid4()))
+        trace_id = request.headers.get("X-LoopPrism-Trace-Id") or request.headers.get("X-Toolglass-Trace-Id") or str(uuid.uuid4())
 
         # Ensure trace exists
         await self._ensure_trace(trace_id, parsed, server_name)
@@ -191,9 +191,9 @@ class MCPHttpHandler:
 
         # Inject trace ID into response header
         if isinstance(response, JSONResponse):
-            response.headers["X-Toolglass-Trace-Id"] = trace_id
+            response.headers["X-LoopPrism-Trace-Id"] = trace_id
         else:
-            response.headers["X-Toolglass-Trace-Id"] = trace_id
+            response.headers["X-LoopPrism-Trace-Id"] = trace_id
 
         return response
 

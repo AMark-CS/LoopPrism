@@ -3,7 +3,7 @@
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from toolglass.api.app import create_app
+from loopprism.api.app import create_app
 
 
 @pytest.fixture

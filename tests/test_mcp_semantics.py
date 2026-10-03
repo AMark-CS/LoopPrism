@@ -2,7 +2,7 @@
 
 import pytest
 
-from toolglass.trace.mcp_semantics import (
+from loopprism.trace.mcp_semantics import (
     MCPProtocol,
     MCPSpanType,
     ParsedMCPRequest,

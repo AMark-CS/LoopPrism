@@ -1,6 +1,6 @@
-"""Configuration management for toolglass.
+"""Configuration management for loopprism.
 
-Reads from environment variables and ~/.toolglass/config.toml.
+Reads from environment variables and ~/.loopprism/config.toml.
 """
 
 import os
@@ -11,18 +11,23 @@ from typing import Optional
 
 def _default_db_path() -> str:
     """Default SQLite database path."""
-    return str(Path.home() / ".toolglass" / "traces.db")
+    current = Path.home() / ".loopprism" / "traces.db"
+    legacy = Path.home() / ".toolglass" / "traces.db"
+    return str(legacy if not current.exists() and legacy.exists() else current)
+
+
+def _env(name: str, default: Optional[str] = None) -> Optional[str]:
+    """Prefer LoopPrism variables while accepting the former prefix."""
+    return os.getenv(name, os.getenv(name.replace("LOOPPRISM_", "TOOLGLASS_"), default))
 
 
 def _default_config_dir() -> Path:
-    """Ensure the toolglass config directory exists."""
-    path = Path.home() / ".toolglass"
-    path.mkdir(parents=True, exist_ok=True)
-    return path
+    """Locate configuration without writing to disk on import."""
+    return Path.home() / ".loopprism"
 
 
 class Config:
-    """Global toolglass configuration."""
+    """Global loopprism configuration."""
 
     def __init__(self) -> None:
         self._load()
@@ -31,47 +36,49 @@ class Config:
         """Load configuration from env vars and config file."""
         # --- Proxy ---
         self.proxy_port: int = int(
-            os.getenv("TOOLGLASS_PROXY_PORT", "4317"),
+            _env("LOOPPRISM_PROXY_PORT", "4317"),
         )
-        self.proxy_host: str = os.getenv(
-            "TOOLGLASS_PROXY_HOST",
+        self.proxy_host: str = _env(
+            "LOOPPRISM_PROXY_HOST",
             "127.0.0.1",
         )
 
         # --- Dashboard ---
         self.dashboard_port: int = int(
-            os.getenv("TOOLGLASS_DASHBOARD_PORT", "8080"),
+            _env("LOOPPRISM_DASHBOARD_PORT", "8080"),
         )
         self.dashboard_enabled: bool = (
-            os.getenv("TOOLGLASS_NO_DASHBOARD", "").lower() != "true"
+            _env("LOOPPRISM_NO_DASHBOARD", "").lower() != "true"
         )
 
         # --- Storage ---
-        self.db_path: str = os.getenv(
-            "TOOLGLASS_DB_PATH",
+        self.db_path: str = _env(
+            "LOOPPRISM_DB_PATH",
             _default_db_path(),
         )
 
         # --- Export ---
-        self.otlp_endpoint: Optional[str] = os.getenv(
-            "TOOLGLASS_OTLP_ENDPOINT",
+        self.otlp_endpoint: Optional[str] = _env(
+            "LOOPPRISM_OTLP_ENDPOINT",
         )
 
         # --- Display ---
         self.verbose: bool = (
-            os.getenv("TOOLGLASS_VERBOSE", "").lower() == "true"
+            _env("LOOPPRISM_VERBOSE", "").lower() == "true"
         )
 
         # --- Retention ---
         self.max_traces: int = int(
-            os.getenv("TOOLGLASS_MAX_TRACES", "100000"),
+            _env("LOOPPRISM_MAX_TRACES", "100000"),
         )
         self.retention_days: int = int(
-            os.getenv("TOOLGLASS_RETENTION_DAYS", "30"),
+            _env("LOOPPRISM_RETENTION_DAYS", "30"),
         )
 
         # Load config file if it exists (overrides defaults but not env vars)
         config_file = _default_config_dir() / "config.toml"
+        if not config_file.exists():
+            config_file = Path.home() / ".toolglass" / "config.toml"
         if config_file.exists():
             self._load_file(config_file)
 
@@ -81,27 +88,27 @@ class Config:
             data = tomllib.load(f)
 
         proxy = data.get("proxy", {})
-        if not os.getenv("TOOLGLASS_PROXY_PORT"):
+        if not _env("LOOPPRISM_PROXY_PORT"):
             self.proxy_port = proxy.get("port", self.proxy_port)
 
         dashboard = data.get("dashboard", {})
-        if not os.getenv("TOOLGLASS_DASHBOARD_PORT"):
+        if not _env("LOOPPRISM_DASHBOARD_PORT"):
             self.dashboard_port = dashboard.get("port", self.dashboard_port)
 
         storage = data.get("storage", {})
-        if not os.getenv("TOOLGLASS_DB_PATH"):
+        if not _env("LOOPPRISM_DB_PATH"):
             self.db_path = storage.get("db_path", self.db_path)
 
-        if not os.getenv("TOOLGLASS_OTLP_ENDPOINT"):
+        if not _env("LOOPPRISM_OTLP_ENDPOINT"):
             self.otlp_endpoint = data.get("export", {}).get(
                 "otlp_endpoint",
                 self.otlp_endpoint,
             )
 
         retention = data.get("retention", {})
-        if not os.getenv("TOOLGLASS_MAX_TRACES"):
+        if not _env("LOOPPRISM_MAX_TRACES"):
             self.max_traces = retention.get("max_traces", self.max_traces)
-        if not os.getenv("TOOLGLASS_RETENTION_DAYS"):
+        if not _env("LOOPPRISM_RETENTION_DAYS"):
             self.retention_days = retention.get(
                 "retention_days",
                 self.retention_days,

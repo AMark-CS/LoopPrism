@@ -1,14 +1,14 @@
-"""Logging configuration for toolglass."""
+"""Logging configuration for loopprism."""
 
 import logging
 import sys
 
 # Module-level logger
-logger = logging.getLogger("toolglass")
+logger = logging.getLogger("loopprism")
 
 
 def setup_logging(verbose: bool = False) -> None:
-    """Configure toolglass logging.
+    """Configure loopprism logging.
 
     Args:
         verbose: If True, set level to DEBUG. Otherwise INFO.

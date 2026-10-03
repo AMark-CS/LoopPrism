@@ -1,4 +1,4 @@
-/** Shared TypeScript types for the toolglass dashboard. */
+/** Shared TypeScript types for the loopprism dashboard. */
 
 export interface Trace {
   id: string;

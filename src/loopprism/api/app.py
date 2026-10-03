@@ -1,4 +1,4 @@
-"""FastAPI application for the toolglass dashboard API."""
+"""FastAPI application for the loopprism dashboard API."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def create_app(
         Configured FastAPI application.
     """
     app = FastAPI(
-        title="toolglass",
+        title="LoopPrism",
         description="Looking glass for your AI tools — API",
         version="0.1.0",
     )

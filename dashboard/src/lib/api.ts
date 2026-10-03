@@ -1,4 +1,4 @@
-/** API client for the toolglass backend. */
+/** API client for the loopprism backend. */
 
 const BASE = '';
 

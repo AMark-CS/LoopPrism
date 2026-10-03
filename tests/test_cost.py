@@ -2,7 +2,7 @@
 
 import pytest
 
-from toolglass.cost.attribution import (
+from loopprism.cost.attribution import (
     CostBreakdown,
     CostItem,
     MCPToolSpan,
@@ -10,7 +10,7 @@ from toolglass.cost.attribution import (
     _reconstruct_mcp_tool_spans,
     attribute,
 )
-from toolglass.cost.pricing import (
+from loopprism.cost.pricing import (
     ModelPricing,
     cost_from_tokens,
     get_pricing,

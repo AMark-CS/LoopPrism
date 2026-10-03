@@ -1,4 +1,4 @@
-/** React hooks for toolglass data. */
+/** React hooks for loopprism data. */
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 

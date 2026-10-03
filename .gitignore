@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 build/
+/dist/
 *.egg
 
 # Virtual environments
@@ -20,7 +21,7 @@ env/
 .DS_Store
 Thumbs.db
 
-# toolglass data
+# loopprism data
 *.db
 *.db-journal
 *.db-wal

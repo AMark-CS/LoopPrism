@@ -8,7 +8,7 @@ export function EmptyState() {
         No traces yet
       </h2>
       <p className="mt-2 max-w-sm text-sm text-[var(--color-muted-foreground)]">
-        Start the toolglass proxy to begin recording MCP calls.
+        Start the loopprism proxy to begin recording MCP calls.
       </p>
 
       <div className="mt-6 flex w-full max-w-md flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-4">
@@ -21,9 +21,9 @@ export function EmptyState() {
             <span className="shrink-0 rounded bg-[var(--color-muted)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-foreground)]">
               1
             </span>
-            <span>Install toolglass</span>
+            <span>Install from GitHub</span>
             <code className="ml-auto rounded bg-[var(--color-secondary)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-foreground)]">
-              pip install toolglass
+              pip install "git+https://github.com/AMark-CS/LoopPrism.git"
             </code>
           </div>
           <div className="flex items-center gap-2">
@@ -32,7 +32,7 @@ export function EmptyState() {
             </span>
             <span>Start the proxy</span>
             <code className="ml-auto rounded bg-[var(--color-secondary)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-foreground)]">
-              toolglass proxy --port 4317
+              loopprism proxy --port 4317
             </code>
           </div>
           <div className="flex items-center gap-2">
