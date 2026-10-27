@@ -43,6 +43,11 @@ class Config:
             "127.0.0.1",
         )
 
+        # Idle gap (seconds) after which uncorrelated traffic starts a new run
+        self.run_idle_seconds: float = float(
+            _env("LOOPPRISM_RUN_IDLE_SECONDS", "30"),
+        )
+
         # --- Dashboard ---
         self.dashboard_port: int = int(
             _env("LOOPPRISM_DASHBOARD_PORT", "8080"),
@@ -90,6 +95,11 @@ class Config:
         proxy = data.get("proxy", {})
         if not _env("LOOPPRISM_PROXY_PORT"):
             self.proxy_port = proxy.get("port", self.proxy_port)
+
+        if not _env("LOOPPRISM_RUN_IDLE_SECONDS"):
+            self.run_idle_seconds = float(
+                proxy.get("run_idle_seconds", self.run_idle_seconds)
+            )
 
         dashboard = data.get("dashboard", {})
         if not _env("LOOPPRISM_DASHBOARD_PORT"):

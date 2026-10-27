@@ -101,6 +101,48 @@ class TraceCollector:
                 ON traces(timestamp);
         """)
         await self._conn.commit()
+        await self._migrate()
+
+    # Columns added after the first release. Existing databases are upgraded in
+    # place; see docs/run-data-model.md.
+    _TRACE_COLUMNS = {
+        "session_id": "TEXT",
+        "status": "TEXT DEFAULT 'running'",
+        "ended_at": "DATETIME",
+        "outcome": "TEXT",
+        "correlation_source": "TEXT",
+    }
+    _SPAN_COLUMNS = {
+        "seq": "INTEGER",
+        "kind": "TEXT",
+        "step_index": "INTEGER",
+        "model": "TEXT",
+        "tokens_in": "INTEGER",
+        "tokens_out": "INTEGER",
+        "tokens_cached": "INTEGER",
+        "cost_usd": "REAL",
+        "finish_reason": "TEXT",
+        "error_type": "TEXT",
+    }
+
+    async def _migrate(self) -> None:
+        """Add any missing columns to traces and spans (idempotent)."""
+        assert self._conn is not None
+        for table, columns in (
+            ("traces", self._TRACE_COLUMNS),
+            ("spans", self._SPAN_COLUMNS),
+        ):
+            cursor = await self._conn.execute(f"PRAGMA table_info({table})")
+            existing = {r["name"] for r in await cursor.fetchall()}
+            for name, decl in columns.items():
+                if name not in existing:
+                    await self._conn.execute(
+                        f"ALTER TABLE {table} ADD COLUMN {name} {decl}"
+                    )
+        await self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_spans_trace_seq ON spans(trace_id, seq)"
+        )
+        await self._conn.commit()
 
     # ------------------------------------------------------------------
     # Trace management
@@ -110,22 +152,35 @@ class TraceCollector:
         self,
         trace_id: Optional[str] = None,
         conversation_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        correlation_source: Optional[str] = None,
         root_span_type: Optional[str] = None,
         root_span_name: Optional[str] = None,
         tags: Optional[dict[str, str]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        exist_ok: bool = False,
     ) -> str:
-        """Create a new trace record. Returns the trace_id."""
+        """Create a new trace (run) record. Returns the trace_id.
+
+        With ``exist_ok`` an already-existing trace is left untouched.
+
+        ``conversation_id`` is a deprecated alias of ``session_id``; both
+        columns are populated so older readers keep working.
+        """
         assert self._conn is not None
         tid = trace_id or str(uuid.uuid4())
+        session_id = session_id or conversation_id
 
         await self._conn.execute(
-            """INSERT INTO traces (id, conversation_id, root_span_type,
+            f"""INSERT {"OR IGNORE " if exist_ok else ""}INTO traces (id, conversation_id, session_id,
+               correlation_source, root_span_type,
                root_span_name, tags, metadata)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 tid,
-                conversation_id,
+                session_id,
+                session_id,
+                correlation_source,
                 root_span_type,
                 root_span_name,
                 json.dumps(tags) if tags else None,
@@ -208,8 +263,13 @@ class TraceCollector:
         tool_arguments: Optional[dict[str, Any]] = None,
         tool_call_id: Optional[str] = None,
         attributes: Optional[dict[str, Any]] = None,
+        step_index: Optional[int] = None,
     ) -> str:
-        """Start a new span. Returns the span_id."""
+        """Start a new span. Returns the span_id.
+
+        Each span gets ``seq``, its position within the run, assigned in the
+        same statement as the insert so ordering never depends on timestamps.
+        """
         assert self._conn is not None
         sid = str(uuid.uuid4())
 
@@ -222,8 +282,11 @@ class TraceCollector:
                mcp_server_name, mcp_server_version, mcp_transport,
                mcp_request_method, mcp_request_id,
                tool_name, tool_arguments, tool_call_id,
-               attributes_json, start_time)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))""",
+               attributes_json, kind, step_index, seq, start_time)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                       (SELECT COALESCE(MAX(seq), 0) + 1 FROM spans
+                        WHERE trace_id = ?),
+                       datetime('now'))""",
             (
                 sid,
                 trace_id,
@@ -238,6 +301,9 @@ class TraceCollector:
                 json.dumps(tool_arguments) if tool_arguments else None,
                 tool_call_id,
                 json.dumps(attributes) if attributes else None,
+                span_type_str,
+                step_index,
+                trace_id,
             ),
         )
         await self._conn.commit()
@@ -280,7 +346,7 @@ class TraceCollector:
                upstream_llm_tokens = ?,
                downstream_llm_tokens = ?,
                status = ?,
-               attributes_json = COALESCE(attributes_json, '{}') || ?
+               attributes_json = json_patch(COALESCE(attributes_json, '{}'), ?)
                WHERE id = ?""",
             (
                 latency_ms,
@@ -316,7 +382,7 @@ class TraceCollector:
             return None
 
         cursor2 = await self._conn.execute(
-            "SELECT * FROM spans WHERE trace_id = ? ORDER BY start_time",
+            "SELECT * FROM spans WHERE trace_id = ? ORDER BY seq, start_time",
             (trace_id,),
         )
         span_rows = await cursor2.fetchall()

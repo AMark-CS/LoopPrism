@@ -29,6 +29,13 @@ class Trace(Base):
     conversation_id: Mapped[Optional[str]] = Column(String(64), nullable=True)
     timestamp: Mapped[datetime] = Column(DateTime, default=datetime.utcnow)
 
+    # Run identity and lifecycle (see docs/run-data-model.md)
+    session_id: Mapped[Optional[str]] = Column(String(64), nullable=True)
+    status: Mapped[str] = Column(String(16), default="running")
+    ended_at: Mapped[Optional[datetime]] = Column(DateTime, nullable=True)
+    outcome: Mapped[Optional[str]] = Column(String(64), nullable=True)
+    correlation_source: Mapped[Optional[str]] = Column(String(16), nullable=True)
+
     # Root span details
     root_span_type: Mapped[Optional[str]] = Column(String(32), nullable=True)
     root_span_name: Mapped[Optional[str]] = Column(String(128), nullable=True)
@@ -85,6 +92,20 @@ class Span(Base):
         String(32),
         default="generic",
     )  # "mcp.tool.call", "mcp.server.list_tools", etc.
+
+    # Position within the run, and span kind (agent.step, llm.call, ...)
+    seq: Mapped[Optional[int]] = Column(Integer, nullable=True)
+    kind: Mapped[Optional[str]] = Column(String(32), nullable=True)
+    step_index: Mapped[Optional[int]] = Column(Integer, nullable=True)
+
+    # ---- LLM spans ----
+    model: Mapped[Optional[str]] = Column(String(128), nullable=True)
+    tokens_in: Mapped[Optional[int]] = Column(Integer, nullable=True)
+    tokens_out: Mapped[Optional[int]] = Column(Integer, nullable=True)
+    tokens_cached: Mapped[Optional[int]] = Column(Integer, nullable=True)
+    cost_usd: Mapped[Optional[float]] = Column(Float, nullable=True)
+    finish_reason: Mapped[Optional[str]] = Column(String(32), nullable=True)
+    error_type: Mapped[Optional[str]] = Column(String(64), nullable=True)
 
     # Timing
     start_time: Mapped[datetime] = Column(DateTime, default=datetime.utcnow)

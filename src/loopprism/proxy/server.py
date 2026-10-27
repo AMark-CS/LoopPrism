@@ -25,6 +25,7 @@ from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
 from ..trace.collector import TraceCollector
+from ..trace.correlation import DEFAULT_IDLE_SECONDS, RunCorrelator
 from ..utils.logging import logger
 from .http_handler import MCPHttpHandler
 
@@ -47,6 +48,7 @@ class ProxyServer:
         port: int = 4317,
         collector: Optional[TraceCollector] = None,
         backend_map: Optional[dict[str, str]] = None,
+        run_idle_seconds: float = DEFAULT_IDLE_SECONDS,
     ) -> None:
         """
         Args:
@@ -55,7 +57,10 @@ class ProxyServer:
             collector: TraceCollector instance for recording spans.
             backend_map: Mapping of URL prefix → backend URL.
                 e.g. {"github": "https://api.github.com/mcp"}
+            run_idle_seconds: Idle gap after which uncorrelated traffic from
+                the same client starts a new run.
         """
+        self.run_idle_seconds = run_idle_seconds
         self.host = host
         self.port = port
         self.collector = collector
@@ -79,6 +84,7 @@ class ProxyServer:
         self._handler = MCPHttpHandler(
             collector=self.collector,
             client=self._client,
+            correlator=RunCorrelator(idle_seconds=self.run_idle_seconds),
         )
         self._app = self._build_app()
         return self

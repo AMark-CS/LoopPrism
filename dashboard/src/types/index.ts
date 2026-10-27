@@ -3,6 +3,11 @@
 export interface Trace {
   id: string;
   conversation_id: string | null;
+  session_id?: string | null;
+  status?: 'running' | 'succeeded' | 'failed' | 'abandoned';
+  ended_at?: string | null;
+  outcome?: string | null;
+  correlation_source?: 'explicit' | 'session' | 'heuristic' | null;
   timestamp: string;
   root_span_type: string | null;
   root_span_name: string | null;
@@ -19,6 +24,9 @@ export interface Span {
   trace_id: string;
   parent_span_id: string | null;
   span_type: string;
+  seq?: number | null;
+  kind?: string | null;
+  step_index?: number | null;
   start_time: string;
   end_time: string | null;
   latency_ms: number | null;

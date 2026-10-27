@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import time
-import uuid
 from typing import Optional
 
 import httpx
@@ -16,6 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from ..trace.collector import TraceCollector
+from ..trace.correlation import Correlation, RunCorrelator
 from ..trace.mcp_semantics import MCPProtocol, ParsedMCPRequest
 from ..utils.logging import logger
 
@@ -27,8 +27,10 @@ class MCPHttpHandler:
         self,
         collector: TraceCollector,
         client: Optional[httpx.AsyncClient] = None,
+        correlator: Optional[RunCorrelator] = None,
     ) -> None:
         self.collector = collector
+        self.correlator = correlator or RunCorrelator()
         self._client = client
         self._own_client = False
 
@@ -110,11 +112,27 @@ class MCPHttpHandler:
     ) -> Response:
         """Handle a traceable MCP request with span creation."""
 
-        # Determine trace ID (from header or new)
-        trace_id = request.headers.get("X-LoopPrism-Trace-Id") or request.headers.get("X-Toolglass-Trace-Id") or str(uuid.uuid4())
+        # Decide which run this request belongs to
+        correlation = self.correlator.resolve(
+            headers=request.headers,
+            body=body,
+            server_name=server_name,
+            client=request.client.host if request.client else None,
+            method=parsed.method,
+        )
+        trace_id = correlation.trace_id
 
         # Ensure trace exists
-        await self._ensure_trace(trace_id, parsed, server_name)
+        await self._ensure_trace(correlation, parsed)
+
+        attributes = {
+            "backend_url": backend_url,
+            "user_agent": request.headers.get("user-agent", ""),
+        }
+        if correlation.remote_parent_span_id:
+            # Kept out of parent_span_id: that span lives in the caller's
+            # tracer, not in this run, and would orphan this span in the UI.
+            attributes["remote_parent_span_id"] = correlation.remote_parent_span_id
 
         # Start span
         span_id = await self.collector.start_span(
@@ -127,10 +145,7 @@ class MCPHttpHandler:
             tool_name=parsed.tool_name,
             tool_arguments=parsed.tool_arguments,
             tool_call_id=parsed.tool_call_id,
-            attributes={
-                "backend_url": backend_url,
-                "user_agent": request.headers.get("user-agent", ""),
-            },
+            attributes=attributes,
         )
 
         # Forward and measure
@@ -150,6 +165,12 @@ class MCPHttpHandler:
             raise
 
         latency = (time.monotonic() - start) * 1000
+
+        # initialize has no session header yet; the server assigns one in its
+        # response. Bind it so follow-up requests join this run.
+        issued_session = response.headers.get("mcp-session-id")
+        if issued_session and not correlation.session_id:
+            self.correlator.bind_session(server_name, issued_session, correlation)
 
         # Extract response body for tracing
         response_body_bytes = b""
@@ -275,24 +296,17 @@ class MCPHttpHandler:
 
     async def _ensure_trace(
         self,
-        trace_id: str,
+        correlation: Correlation,
         parsed: ParsedMCPRequest,
-        server_name: str,
     ) -> None:
         """Ensure a trace record exists (idempotent)."""
-        # Try to create — ignore if already exists
-        try:
-            await self.collector.create_trace(
-                trace_id=trace_id,
-                root_span_type=(
-                    parsed.span_type.value
-                    if parsed.span_type
-                    else None
-                ),
-                root_span_name=(
-                    parsed.tool_name or parsed.method or "mcp_call"
-                ),
-            )
-        except Exception:
-            # Trace likely already exists — that's fine
-            pass
+        await self.collector.create_trace(
+            trace_id=correlation.trace_id,
+            session_id=correlation.session_id,
+            correlation_source=correlation.source,
+            root_span_type=(
+                parsed.span_type.value if parsed.span_type else None
+            ),
+            root_span_name=parsed.tool_name or parsed.method or "mcp_call",
+            exist_ok=True,
+        )

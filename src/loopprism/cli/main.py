@@ -127,6 +127,7 @@ def proxy(
             host="127.0.0.1",
             port=port,
             collector=collector,
+            run_idle_seconds=config.run_idle_seconds,
         )
 
         fastapi_app = create_app(

@@ -230,3 +230,110 @@ class TestTraceCollector:
         assert trace["span_count"] == 1
         assert trace["error_count"] == 0
         assert trace["mcp_servers"] == '["github"]'
+
+
+class TestRunDataModel:
+    """Run/span data model: seq ordering, attribute merge, migration."""
+
+    @pytest.mark.asyncio
+    async def test_seq_is_per_run_and_orders_spans(self, collector):
+        a = await collector.create_trace()
+        b = await collector.create_trace()
+        ids_a = [
+            await collector.start_span(trace_id=a, span_type="mcp.tool.call")
+            for _ in range(3)
+        ]
+        await collector.start_span(trace_id=b, span_type="mcp.tool.call")
+
+        _, spans = await collector.get_trace(a)
+        assert [s["id"] for s in spans] == ids_a
+        assert [s["seq"] for s in spans] == [1, 2, 3]
+        assert all(s["kind"] == "mcp.tool.call" for s in spans)
+
+        _, spans_b = await collector.get_trace(b)
+        assert [s["seq"] for s in spans_b] == [1]
+
+    @pytest.mark.asyncio
+    async def test_finish_span_merges_attributes_into_valid_json(self, collector):
+        import json
+
+        tid = await collector.create_trace()
+        sid = await collector.start_span(
+            trace_id=tid,
+            span_type="mcp.tool.call",
+            attributes={"backend_url": "http://x"},
+        )
+        await collector.finish_span(
+            span_id=sid, latency_ms=1.0, attributes={"error": "boom"}
+        )
+        _, spans = await collector.get_trace(tid)
+        assert json.loads(spans[0]["attributes_json"]) == {
+            "backend_url": "http://x",
+            "error": "boom",
+        }
+
+    @pytest.mark.asyncio
+    async def test_finish_span_without_start_attributes(self, collector):
+        import json
+
+        tid = await collector.create_trace()
+        sid = await collector.start_span(trace_id=tid, span_type="mcp.tool.call")
+        await collector.finish_span(span_id=sid, latency_ms=1.0)
+        _, spans = await collector.get_trace(tid)
+        assert json.loads(spans[0]["attributes_json"]) == {}
+
+    @pytest.mark.asyncio
+    async def test_session_id_and_conversation_id_alias(self, collector):
+        t1 = await collector.create_trace(
+            session_id="s1", correlation_source="explicit"
+        )
+        t2 = await collector.create_trace(conversation_id="legacy")
+        trace1, _ = await collector.get_trace(t1)
+        trace2, _ = await collector.get_trace(t2)
+        assert trace1["session_id"] == trace1["conversation_id"] == "s1"
+        assert trace1["correlation_source"] == "explicit"
+        assert trace1["status"] == "running"
+        assert trace2["session_id"] == "legacy"
+
+    @pytest.mark.asyncio
+    async def test_migrates_legacy_database(self, db_path):
+        import sqlite3
+
+        from loopprism.trace.collector import TraceCollector
+
+        conn = sqlite3.connect(db_path)
+        conn.executescript(
+            """
+            CREATE TABLE traces (id TEXT PRIMARY KEY, conversation_id TEXT,
+                timestamp DATETIME DEFAULT (datetime('now')), root_span_type TEXT,
+                root_span_name TEXT, total_latency_ms REAL, total_cost_usd REAL,
+                span_count INTEGER DEFAULT 0, error_count INTEGER DEFAULT 0,
+                mcp_servers TEXT, tags TEXT, metadata TEXT);
+            CREATE TABLE spans (id TEXT PRIMARY KEY, trace_id TEXT NOT NULL,
+                parent_span_id TEXT, span_type TEXT DEFAULT 'generic',
+                start_time DATETIME DEFAULT (datetime('now')), end_time DATETIME,
+                latency_ms REAL, mcp_server_name TEXT, mcp_server_version TEXT,
+                mcp_transport TEXT, mcp_request_method TEXT, mcp_request_id TEXT,
+                tool_name TEXT, tool_arguments TEXT, tool_call_id TEXT,
+                result_content_preview TEXT, result_size_bytes INTEGER,
+                result_is_error INTEGER DEFAULT 0, upstream_llm_tokens INTEGER,
+                downstream_llm_tokens INTEGER, attributes_json TEXT,
+                status TEXT DEFAULT 'ok');
+            INSERT INTO traces (id, conversation_id) VALUES ('old', 'c');
+            """
+        )
+        conn.commit()
+        conn.close()
+
+        c = TraceCollector(db_path)
+        await c.initialize()
+        await c.close()
+        await c.initialize()  # reopening an already-migrated db must be a no-op
+        try:
+            trace, _ = await c.get_trace("old")
+            assert trace["conversation_id"] == "c"
+            sid = await c.start_span(trace_id="old", span_type="mcp.tool.call")
+            _, spans = await c.get_trace("old")
+            assert spans[0]["id"] == sid and spans[0]["seq"] == 1
+        finally:
+            await c.close()
