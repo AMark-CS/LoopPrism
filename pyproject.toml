@@ -45,8 +45,7 @@ dev = [
 ]
 
 [project.scripts]
-loopprism = "loopprism.cli.main:app"
-toolglass = "loopprism.cli.main:app"
+lprism = "loopprism.cli.main:app"
 
 [project.urls]
 Homepage = "https://github.com/AMark-CS/LoopPrism"

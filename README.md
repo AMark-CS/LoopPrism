@@ -19,7 +19,7 @@ how long it took, and where your token budget is going.
 
 ```bash
 pip install "git+https://github.com/AMark-CS/LoopPrism.git"
-loopprism proxy --port 4317
+lprism proxy --port 4317
 ```
 
 Then open `http://localhost:8080` and watch every MCP call appear in real time.
@@ -44,7 +44,7 @@ pip install "git+https://github.com/AMark-CS/LoopPrism.git"
 ### 2. Start the proxy
 
 ```bash
-loopprism proxy --port 4317
+lprism proxy --port 4317
 
 ╭─────────────────────────────────────────────────────╮
 │              loopprism                              │
@@ -90,7 +90,7 @@ Visit `http://localhost:8080` — every MCP tool call appears in real time with:
 ## Architecture
 
 ```
-Agent ──▶ loopprism Proxy ──▶ MCP Server
+Agent ──▶ LoopPrism Proxy ──▶ MCP Server
               │
               ├── Intercepts JSON-RPC
               ├── Extracts tool name, args, latency
@@ -102,22 +102,22 @@ Agent ──▶ loopprism Proxy ──▶ MCP Server
 
 ```bash
 # Start proxy + built-in dashboard (default)
-loopprism proxy
+lprism proxy
 
 # Custom ports
-loopprism proxy --port 4317 --dashboard-port 8080
+lprism proxy --port 4317 --dashboard-port 8080
 
 # Proxy only (no dashboard)
-loopprism proxy --no-dashboard
+lprism proxy --no-dashboard
 
 # Standalone dashboard (connect to a remote DB)
-loopprism dashboard --db ~/.loopprism/remote.db
+lprism dashboard --db ~/.loopprism/remote.db
 
 # Analyze a specific trace
-loopprism analyze <trace-id>
+lprism analyze <trace-id>
 
 # Debug verbose mode
-loopprism proxy --verbose
+lprism proxy --verbose
 ```
 
 ## API
@@ -150,7 +150,7 @@ npm run dev
 
 ## Rename compatibility
 
-LoopPrism was previously named toolglass. The Python package and primary CLI are now `loopprism`. The `toolglass` CLI alias, `TOOLGLASS_*` environment variables, and incoming `X-Toolglass-*` headers remain supported. New environment variables use `LOOPPRISM_*` and take precedence. Existing `~/.toolglass/traces.db` and `config.toml` are used when their new equivalents are absent; no data is moved or deleted.
+LoopPrism was previously named toolglass. The Python package is `loopprism` and the CLI command is `lprism`; the former `toolglass` and `loopprism` commands no longer exist. `TOOLGLASS_*` environment variables and incoming `X-Toolglass-*` headers remain supported. New environment variables use `LOOPPRISM_*` and take precedence. Existing `~/.toolglass/traces.db` and `config.toml` are used when their new equivalents are absent; no data is moved or deleted.
 
 Install from GitHub for now; this repository does not yet provide a published `loopprism` PyPI release.
 

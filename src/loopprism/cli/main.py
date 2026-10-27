@@ -13,7 +13,7 @@ from ..proxy.server import ProxyServer
 from ..api.app import create_app
 
 app = typer.Typer(
-    name="loopprism",
+    name="lprism",
     help="See what your agents actually do.",
     invoke_without_command=True,
 )
