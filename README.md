@@ -1,7 +1,6 @@
-<p align="center">
-  <h1 align="center">LoopPrism</h1>
-  <p align="center"><em>See what your agents actually do.</em></p>
-</p>
+<h1 align="center"><img src="docs/assets/loopprism-logo.png" alt="LoopPrism logo" width="64" align="absmiddle"> LoopPrism</h1>
+
+<p align="center"><em>See what your agents actually do.</em></p>
 
 <p align="center">
   <a href="https://github.com/AMark-CS/LoopPrism"><img src="https://img.shields.io/badge/python-3.10+-blue?logo=python" alt="Python"></a>
