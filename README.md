@@ -98,6 +98,16 @@ Agent ──▶ LoopPrism Proxy ──▶ MCP Server
               └── Serves Dashboard (http://localhost:8080)
 ```
 
+Current layers, top to bottom (proxy, trace core, analysis, API / dashboard / CLI):
+
+![LoopPrism architecture, current state](docs/assets/architecture-current.png)
+
+Where it is heading, with built and planned pieces (solid vs dashed):
+
+![LoopPrism stages, built vs planned](docs/assets/architecture-stages.png)
+
+Source files are in Figma: [LoopPrism architecture](https://www.figma.com/design/RZP1ns1hfsPffaEZFOYlqt) (private to the author's team until shared). Data model details: [docs/run-data-model.md](docs/run-data-model.md).
+
 ## Commands
 
 ```bash
