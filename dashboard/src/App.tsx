@@ -6,7 +6,8 @@ import { CostPanel } from './components/CostPanel';
 import { MCPServerPanel } from './components/MCPServerPanel';
 import { EmptyState } from './components/EmptyState';
 import { useTraces, useMCPServers, useCostSummary } from './hooks/useTraces';
-import { Activity, Server, DollarSign, Search } from 'lucide-react';
+import { Header } from './components/Header';
+import { Search } from 'lucide-react';
 
 export default function App() {
   const [selectedTraceId, setSelectedTraceId] = useState<string | null>(null);
@@ -17,45 +18,11 @@ export default function App() {
 
   const traces = tracesData?.traces ?? [];
   const servers = serversData ?? [];
-  const cost = costData ?? {
-    total_tool_calls: 0,
-    total_errors: 0,
-    total_result_bytes: 0,
-    estimated_cost_usd: 0,
-  };
-
   const hasData = traces.length > 0;
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Header */}
-      <header className="flex h-14 items-center justify-between border-b border-[var(--color-border)] px-6">
-        <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-[var(--color-primary)]" />
-          <span className="text-sm font-semibold tracking-tight text-[var(--color-foreground)]">
-            LoopPrism
-          </span>
-          <span className="text-xs text-[var(--color-muted-foreground)]">
-            Looking glass for your AI tools
-          </span>
-        </div>
-        <div className="flex items-center gap-4 text-xs text-[var(--color-muted-foreground)]">
-          <span className="flex items-center gap-1">
-            <Server className="h-3 w-3" />
-            {servers.length} servers
-          </span>
-          <span className="flex items-center gap-1">
-            <Activity className="h-3 w-3" />
-            {cost.total_tool_calls} calls
-          </span>
-          <span className="flex items-center gap-1">
-            <DollarSign className="h-3 w-3" />
-            {cost.estimated_cost_usd > 0
-              ? `$${cost.estimated_cost_usd.toFixed(4)}`
-              : '$0'}
-          </span>
-        </div>
-      </header>
+      <Header summary={costData} />
 
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden">

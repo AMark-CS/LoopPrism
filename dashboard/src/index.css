@@ -34,9 +34,9 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* No margin/padding reset here: Tailwind's preflight already does it inside a
+   cascade layer, and an unlayered reset would override every spacing utility. */
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
 }
 

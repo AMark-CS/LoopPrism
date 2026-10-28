@@ -1,3 +1,4 @@
+import { parseUtc } from '../lib/format';
 import { formatDistanceToNow } from 'date-fns';
 import { X, Clock, AlertCircle, Activity } from 'lucide-react';
 import type { Trace } from '../types';
@@ -20,7 +21,7 @@ export function TraceInfoBar({ trace, onClose }: TraceInfoBarProps) {
         {/* Timestamp */}
         <span className="shrink-0 text-[10px] text-[var(--color-muted-foreground)]">
           {trace.timestamp
-            ? formatDistanceToNow(new Date(trace.timestamp), { addSuffix: true })
+            ? formatDistanceToNow(parseUtc(trace.timestamp), { addSuffix: true })
             : ''}
         </span>
 

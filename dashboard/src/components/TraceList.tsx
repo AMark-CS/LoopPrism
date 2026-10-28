@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { AlertCircle } from 'lucide-react';
 import type { Trace } from '../types';
+import { formatUsd, parseUtc } from '../lib/format';
 
 interface TraceListProps {
   traces: Trace[];
@@ -48,11 +49,12 @@ export function TraceList({ traces, selectedId, onSelect }: TraceListProps) {
           <div className="flex w-full items-center justify-between">
             <span className="text-[10px] text-[var(--color-muted-foreground)]">
               {trace.timestamp
-                ? formatDistanceToNow(new Date(trace.timestamp), { addSuffix: true })
+                ? formatDistanceToNow(parseUtc(trace.timestamp), { addSuffix: true })
                 : ''}
             </span>
             <span className="text-[10px] text-[var(--color-muted-foreground)]">
               {trace.span_count} spans
+              {trace.total_cost_usd != null && ` · ${formatUsd(trace.total_cost_usd)}`}
             </span>
           </div>
         </button>

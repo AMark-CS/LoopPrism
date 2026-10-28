@@ -111,6 +111,10 @@ export interface TraceListResponse {
 }
 
 export interface CostSummary {
+  run_count: number;
+  priced_runs: number;
+  tool_call_count: number;
+  pricing_as_of: string;
   total_tool_calls: number;
   total_errors: number;
   total_result_bytes: number;
