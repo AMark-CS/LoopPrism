@@ -12,3 +12,42 @@ export function formatUsd(value: number): string {
   }
   return `$${value.toFixed(2)}`;
 }
+
+/** 1234 → "1.2k", 1_500_000 → "1.5M". */
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k`;
+  return String(Math.round(n));
+}
+
+/** 1500 → "1.5s", 90_000 → "1m 30s". */
+export function formatMs(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(s < 10 ? 1 : 0)}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${Math.round(s % 60)}s`;
+  return `${Math.floor(m / 60)}h ${m % 60}m`;
+}
+
+export const CATEGORY_COLORS: Record<string, string> = {
+  system_prompt: '#6366f1',
+  tool_schemas: '#f59e0b',
+  user: '#22c55e',
+  injected: '#a855f7',
+  skills: '#f97316',
+  assistant: '#3b82f6',
+  tool_results: '#14b8a6',
+  unattributed: '#6b7280',
+};
+
+export const CATEGORY_LABELS: Record<string, string> = {
+  system_prompt: 'System Prompt',
+  tool_schemas: 'Tool Schemas',
+  user: 'User Messages',
+  injected: 'Injected Context',
+  skills: 'Skill Injections',
+  assistant: 'Assistant Messages',
+  tool_results: 'Tool Results',
+  unattributed: 'System & tools (inferred)',
+};

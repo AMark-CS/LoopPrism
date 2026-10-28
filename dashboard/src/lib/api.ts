@@ -1,10 +1,25 @@
 /** API client for the loopprism backend. */
+import type * as S from '../types/sessions';
 
 const BASE = '';
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+async function post<T>(path: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, { method: 'POST' });
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      detail = (await res.json()).detail ?? detail;
+    } catch {
+      /* keep status text */
+    }
+    throw new Error(detail);
+  }
   return res.json();
 }
 
@@ -58,4 +73,38 @@ export const api = {
     get<{ trends: import('../types').CostTrend[] }>(
       `/api/cost/trend?limit=${limit}`,
     ),
+
+  // Sessions (inspector)
+  listSessions: (params: { q?: string; agent?: string; project?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.q) qs.set('q', params.q);
+    if (params.agent) qs.set('agent', params.agent);
+    if (params.project) qs.set('project', params.project);
+    return get<S.SessionList>(`/api/sessions?${qs}`);
+  },
+  getSession: (id: string) => get<S.SessionDetail>(`/api/sessions/${id}`),
+  getSessionEvents: (
+    id: string,
+    params: { offset?: number; limit?: number; kinds?: string; q?: string; preview?: number },
+  ) => {
+    const qs = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== '') qs.set(k, String(v));
+    }
+    return get<{ total: number; events: S.SessionEvent[] }>(
+      `/api/sessions/${id}/events?${qs}`,
+    );
+  },
+  getSessionEvent: (id: string, idx: number) =>
+    get<S.SessionEvent>(`/api/sessions/${id}/events/${idx}`),
+  getTrajectory: (id: string) => get<S.Trajectory>(`/api/sessions/${id}/trajectory`),
+  getContext: (id: string) => get<S.ContextOverview>(`/api/sessions/${id}/context`),
+  getStepContext: (id: string, step: number) =>
+    get<S.StepContext>(`/api/sessions/${id}/context/${step}`),
+  getTiming: (id: string) => get<S.Timing>(`/api/sessions/${id}/timing`),
+  resumeSession: (id: string, terminal: boolean) =>
+    post<{ command: string; opened: boolean }>(
+      `/api/sessions/${id}/resume?terminal=${terminal}`,
+    ),
+  deleteSession: (id: string) => post<{ trashed: string }>(`/api/sessions/${id}/delete`),
 };

@@ -110,6 +110,26 @@ app and choose **Open**, or run `xattr -dr com.apple.quarantine /Applications/Lo
 Point MCP clients at `http://127.0.0.1:4317/<server-name>` (the menu bar icon has
 **Copy proxy URL**). More in [desktop/README.md](desktop/README.md).
 
+## Session inspector
+
+The desktop app (and `http://127.0.0.1:8080` when you run `lprism proxy`) opens on **Sessions**: every
+Claude Code and Codex session on your machine, read straight from their own session files, with
+nothing to install or configure.
+
+- **Sessions**: search across all of them, group by day or project, resume a session in Terminal
+  (or copy the `claude --resume` / `codex resume` command), export to Markdown, move to the Trash.
+- **Chat**: the conversation, tool calls expandable.
+- **Trajectory**: a timeline of every step (prompt, injected context, thinking, tool call, result)
+  with durations, search, and flagged patterns such as the same tool called again and again.
+- **Context**: what filled the model's input at each step (system prompt, tool schemas, your
+  messages, injected context, tool results), the context-window fill, a trend over the session, cache
+  hit rate, cost at current API prices and where the time went. For Claude Code 2.1.308 and newer
+  the exact requests are recorded in the session file, so the breakdown is exact; for older sessions
+  the system prompt and tool schemas are inferred.
+
+Session content never leaves your machine, and these endpoints only answer requests from your own
+dashboard.
+
 ## Claude Code and Codex
 
 The MCP proxy only sees MCP calls. To record everything a coding agent does (shell
