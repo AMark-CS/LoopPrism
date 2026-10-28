@@ -17,6 +17,9 @@ menu bar.
 
 ## Using it
 
+- **Sessions** page (opens first): browse, search, resume, export and delete your Claude Code and
+  Codex sessions, and inspect each one's chat, trajectory and context. **Live runs** shows what the
+  hooks record as it happens.
 - **Apps** page: switch on **Claude Code** and/or **Codex** and LoopPrism starts
   recording their prompts, tool calls and errors. The first time you open the
   app it offers to enable every app it finds. Switching one off removes its

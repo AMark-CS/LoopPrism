@@ -20,12 +20,29 @@ function toast(text) {
 }
 
 /* ---------- tabs ---------- */
+const DASH_TABS = new Set(["sessions", "live"]);
+let route = "sessions";
+let applied = null; // route currently loaded in the iframe (keeps inner navigation when switching tabs)
+
+function dashSrc() {
+  return `${dashboardUrl}/#/${route}`;
+}
+
 function showTab(name) {
+  if (name === "dashboard") name = "sessions";
+  if (DASH_TABS.has(name)) {
+    route = name;
+    if (dashboardUrl && applied !== name) {
+      applied = name;
+      $("#dash").src = dashSrc();
+    }
+  }
+  const pane = DASH_TABS.has(name) ? "dashboard" : name;
   for (const b of document.querySelectorAll("nav button")) {
     b.classList.toggle("active", b.dataset.tab === name);
   }
   for (const t of document.querySelectorAll(".tab")) {
-    t.classList.toggle("active", t.id === `tab-${name}`);
+    t.classList.toggle("active", t.id === `tab-${pane}`);
   }
   if (name === "apps") refreshAgents();
   if (name === "settings") fillSettings();
@@ -54,12 +71,9 @@ function applyStatus(s) {
   const overlay = $("#overlay");
   const dash = $("#dash");
   if (s.state === "running") {
-    if (dashboardUrl !== s.dashboardUrl) {
-      dashboardUrl = s.dashboardUrl;
-      dash.src = s.dashboardUrl;
-    } else {
-      dash.src = s.dashboardUrl; // proxy restarted on the same port: reload
-    }
+    dashboardUrl = s.dashboardUrl; // also reloads after a proxy restart
+    applied = route;
+    dash.src = dashSrc();
     overlay.classList.add("hidden");
   } else {
     overlay.classList.remove("hidden");

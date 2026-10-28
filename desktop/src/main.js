@@ -71,7 +71,8 @@ function updateTray() {
         ? [{ label: `Proxy ${status.proxyUrl}`, enabled: false }]
         : []),
       { type: "separator" },
-      { label: "Open dashboard", click: () => showWindow("dashboard") },
+      { label: "Sessions", click: () => showWindow("sessions") },
+      { label: "Live runs", click: () => showWindow("live") },
       { label: "Apps…", click: () => showWindow("apps") },
       {
         label: "Copy proxy URL",
