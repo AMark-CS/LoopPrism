@@ -18,9 +18,22 @@ for optional in ("uvloop", "httptools", "websockets", "watchfiles"):
     except Exception:
         pass
 
-# Includes loopprism/dashboard/dist (the built React dashboard), which
-# api/app.py serves relative to its own __file__.
-datas = collect_data_files("loopprism")
+# The React dashboard is served from loopprism/dashboard/dist (api/app.py finds
+# it relative to its own __file__). Bundle a fresh build of dashboard/ rather
+# than whatever copy is committed under src/, so the app never ships a stale UI.
+import os
+
+DASHBOARD_DIST = os.path.abspath(
+    os.path.join(SPECPATH, "..", "..", "dashboard", "dist")
+)
+if not os.path.isfile(os.path.join(DASHBOARD_DIST, "index.html")):
+    raise SystemExit(f"Build the dashboard first: {DASHBOARD_DIST} is missing")
+datas = [
+    d
+    for d in collect_data_files("loopprism")
+    if not d[1].replace(os.sep, "/").startswith("loopprism/dashboard/dist")
+]
+datas.append((DASHBOARD_DIST, "loopprism/dashboard/dist"))
 
 a = Analysis(
     ["entry.py"],

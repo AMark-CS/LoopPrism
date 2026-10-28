@@ -17,6 +17,19 @@ menu bar.
 
 ## Using it
 
+- **Apps** page: switch on **Claude Code** and/or **Codex** and LoopPrism starts
+  recording their prompts, tool calls and errors. The first time you open the
+  app it offers to enable every app it finds. Switching one off removes its
+  hook again. (This runs the same installers as `npx loopprism install`,
+  bundled from `../npm`.) For Codex, run `/hooks` once afterwards to trust the
+  hooks; for Claude Code, restart running sessions.
+- Other MCP clients that use HTTP servers can be pointed at the proxy; the Apps
+  page builds the URL for you.
+- **Estimated cost** in the Runs header and on each run is the turn's token usage priced at the
+  providers' current API prices (updated with the app). Subscription plans bill differently, so read it as
+  "what this would cost on the API".
+- **Settings** page: proxy/dashboard ports, open at login, where the data lives.
+
 - Point your MCP clients at `http://127.0.0.1:4317/<server-name>`. The menu bar
   icon has **Copy proxy URL** with the exact address.
 - If 4317 (proxy) or 8080 (dashboard) is taken, the app picks free ports; the
@@ -86,6 +99,9 @@ is untested so far.
 | Path | Purpose |
 | --- | --- |
 | `src/main.js` | Electron main: window, tray, lifecycle |
+| `src/ui/` | The window: sidebar, Apps and Settings pages (the dashboard is embedded) |
+| `src/agents.js`, `src/agent-worker.js` | Detect/connect Claude Code and Codex via the bundled `../npm` installers |
+| `src/settings.js` | Persisted app settings (ports, login item, onboarding) |
 | `src/sidecar.js` | Spawns/supervises the proxy, health checks, restart, cleanup |
 | `src/ports.js` | Free-port selection |
 | `sidecar/entry.py`, `sidecar/lprism.spec` | PyInstaller entry point and spec |

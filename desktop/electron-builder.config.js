@@ -32,7 +32,16 @@ module.exports = {
   files: ["src/**/*", "assets/**/*", "package.json"],
   // The PyInstaller one-dir bundle (built by `npm run sidecar`); the app
   // spawns Resources/sidecar/lprism/lprism.
-  extraResources: [{ from: "sidecar/dist/lprism", to: "sidecar/lprism" }],
+  extraResources: [
+    { from: "sidecar/dist/lprism", to: "sidecar/lprism" },
+    // The Claude Code / Codex hook installers and scripts (../npm), which the
+    // Apps page runs to connect each coding agent.
+    {
+      from: "../npm",
+      to: "agent-hooks",
+      filter: ["lib/**", "plugin/**", ".claude-plugin/**", "package.json"],
+    },
+  ],
   artifactName: "LoopPrism-${version}-${arch}.${ext}",
   mac: {
     category: "public.app-category.developer-tools",

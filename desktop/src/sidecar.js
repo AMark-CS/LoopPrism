@@ -4,8 +4,6 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { pickPort, HOST } = require("./ports");
 
-const PREFERRED_PROXY_PORT = 4317;
-const PREFERRED_DASHBOARD_PORT = 8080;
 const HEALTH_TIMEOUT_MS = 30_000;
 const STABLE_AFTER_MS = 60_000;
 const MAX_CONSECUTIVE_FAILURES = 5;
@@ -19,6 +17,15 @@ async function isHealthy(url) {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+async function fetchJson(url) {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(800) });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
   }
 }
 
@@ -47,8 +54,9 @@ function isLprism(pid) {
  * one of: starting | running | restarting | failed | stopped.
  */
 class Sidecar extends EventEmitter {
-  constructor({ binary, logFile, pidFile }) {
+  constructor({ binary, logFile, pidFile, preferred }) {
     super();
+    this.preferred = preferred; // { proxy, dashboard }
     this.binary = binary;
     this.logFile = logFile;
     this.pidFile = pidFile;
@@ -58,6 +66,8 @@ class Sidecar extends EventEmitter {
     this.ports = null;
     this.state = "stopped";
     this.runToken = 0;
+    this.external = false; // using a LoopPrism someone else started
+    this.watcher = null;
   }
 
   get proxyUrl() {
@@ -74,6 +84,7 @@ class Sidecar extends EventEmitter {
       state,
       proxyUrl: this.proxyUrl,
       dashboardUrl: this.dashboardUrl,
+      external: this.external,
       message,
     });
   }
@@ -117,15 +128,65 @@ class Sidecar extends EventEmitter {
     return this.launch();
   }
 
+  /**
+   * Is a LoopPrism (e.g. `lprism proxy` started from a terminal) already
+   * serving the wanted ports? Then use it instead of starting a second proxy
+   * that would fight over the database and the hooks' address.
+   */
+  async detectExternal() {
+    const { proxy, dashboard } = this.preferred;
+    const [p, d] = await Promise.all([
+      fetchJson(`http://${HOST}:${proxy}/health`),
+      fetchJson(`http://${HOST}:${dashboard}/api/health`),
+    ]);
+    // /health with a "backends" list is the proxy's signature.
+    return p?.status === "ok" && "backends" in p && d?.status === "ok"
+      ? { proxy, dashboard }
+      : null;
+  }
+
+  adopt(token, ports) {
+    this.ports = ports;
+    this.external = true;
+    this.failures = 0;
+    this.log(`using existing LoopPrism: proxy ${this.proxyUrl}, dashboard ${this.dashboardUrl}`);
+    this.setState("running");
+    let misses = 0;
+    this.watcher = setInterval(async () => {
+      const ok = await fetchJson(`${this.dashboardUrl}/api/health`);
+      misses = ok ? 0 : misses + 1;
+      if (misses < 3 || token !== this.runToken) return;
+      // It went away: take over with our own proxy.
+      this.log("existing LoopPrism is gone; starting our own");
+      this.clearWatcher();
+      this.external = false;
+      this.ports = null;
+      if (!this.stopping) this.launch();
+    }, 2000);
+  }
+
+  clearWatcher() {
+    if (this.watcher) clearInterval(this.watcher);
+    this.watcher = null;
+  }
+
   async launch() {
     const token = ++this.runToken;
+    this.clearWatcher();
+    this.external = false;
+    const existing = await this.detectExternal();
+    if (token !== this.runToken || this.stopping) return false;
+    if (existing) {
+      this.adopt(token, existing);
+      return true;
+    }
     // Keep the same ports across restarts when they're still free so MCP
     // client configs and the open window stay valid.
     const proxy = await pickPort(
-      this.ports?.proxy ?? PREFERRED_PROXY_PORT,
+      this.ports?.proxy ?? this.preferred.proxy,
     );
     const dashboard = await pickPort(
-      this.ports?.dashboard ?? PREFERRED_DASHBOARD_PORT,
+      this.ports?.dashboard ?? this.preferred.dashboard,
       [proxy],
     );
     this.ports = { proxy, dashboard };
@@ -214,6 +275,13 @@ class Sidecar extends EventEmitter {
     await this.launch();
   }
 
+  /** Change the wanted ports (settings) and restart on them. */
+  async setPreferred(preferred) {
+    this.preferred = preferred;
+    this.ports = null;
+    return this.restart();
+  }
+
   /** Manual restart (tray menu); also recovers from the "failed" state. */
   async restart() {
     await this.stopChild();
@@ -224,6 +292,7 @@ class Sidecar extends EventEmitter {
 
   async stopChild() {
     this.runToken++; // invalidate pending health waits / restarts
+    this.clearWatcher();
     const child = this.child;
     if (!child || child.exitCode !== null || child.signalCode !== null) return;
     const gone = new Promise((resolve) => child.once("exit", resolve));
