@@ -1,7 +1,7 @@
 {
   "name": "loopprism-desktop",
   "productName": "LoopPrism",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "LoopPrism desktop app \u2014 MCP observability proxy and dashboard in one app",
   "main": "src/main.js",
   "author": "Mark Zhang",
