@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -301,7 +302,8 @@ class TestApi:
         r = await api.post(f"/api/sessions/{sid}/delete")
         assert r.status_code == 200
         assert not os.path.exists(home / ".claude" / "projects" / "-work-app" / f"{SID}.jsonl")
-        assert os.path.exists(r.json()["trashed"])
+        if sys.platform != "win32":  # on Windows the file goes to the Recycle Bin, which has no path to check
+            assert os.path.exists(r.json()["trashed"])
         assert (await api.get("/api/sessions")).json()["total"] == 0
 
     @pytest.mark.asyncio

@@ -93,7 +93,7 @@ jobs:
         working-directory: desktop
         run: |
           npm ci
-          npm test 2>&1 | Tee-Object -FilePath test.log
+          node --test --test-reporter=spec 2>&1 | Tee-Object -FilePath test.log
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             $tail = (Get-Content test.log -Tail 60) -join "%0A"
@@ -105,7 +105,7 @@ jobs:
         if: always()
         working-directory: npm
         run: |
-          node --test 2>&1 | Tee-Object -FilePath test.log
+          node --test --test-reporter=spec 2>&1 | Tee-Object -FilePath test.log
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             $tail = (Get-Content test.log -Tail 60) -join "%0A"

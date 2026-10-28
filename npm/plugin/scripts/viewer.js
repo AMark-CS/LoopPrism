@@ -62,7 +62,8 @@ function desktopApp(env = process.env) {
     process.platform === 'darwin'
       ? ['/Applications/LoopPrism.app']
       : process.platform === 'win32' && env.LOCALAPPDATA
-        ? [path.join(env.LOCALAPPDATA, 'Programs', 'LoopPrism', 'LoopPrism.exe')]
+        ? // the per-user installer names the folder after the package; the product name is the fallback
+          ['loopprism-desktop', 'LoopPrism'].map((d) => path.join(env.LOCALAPPDATA, 'Programs', d, 'LoopPrism.exe'))
         : [];
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
