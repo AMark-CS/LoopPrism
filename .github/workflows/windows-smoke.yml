@@ -65,7 +65,8 @@ jobs:
 
       # Artifacts need a login to download; a branch of PNGs can be viewed by anyone.
       - name: Publish UI screenshots
-        if: always()
+        # Only when run by hand, so routine runs don't rewrite a branch of images.
+        if: always() && github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
