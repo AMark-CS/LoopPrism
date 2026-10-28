@@ -24,6 +24,14 @@ lprism proxy --port 4317
 
 Then open `http://localhost:8080` and watch every MCP call appear in real time.
 
+**Three ways to use it** (they share one trace database, `~/.loopprism/traces.db`):
+
+| You want | Use |
+|---|---|
+| A double-click app, no Python or terminal | [Desktop app](#desktop-app-macos) |
+| See what Claude Code or Codex did (every tool call, not only MCP) | [`npx loopprism install`](#claude-code-and-codex) |
+| See calls from MCP clients, or run it headless | `lprism proxy` (above) |
+
 ## Features
 
 - **Waterfall traces** — See every MCP tool call with timing, result size, and error state
@@ -87,6 +95,19 @@ Visit `http://localhost:8080` — every MCP tool call appears in real time with:
 - Cost breakdown by tool
 - MCP server health stats
 
+## Desktop app (macOS)
+
+Download the latest `.dmg` from the
+[Releases page](https://github.com/AMark-CS/LoopPrism/releases/latest): `arm64` for Apple
+Silicon, `x64` for Intel. Drag **LoopPrism** into Applications and open it. It bundles the
+proxy and the dashboard (no Python needed), shows the dashboard in a window, and keeps
+running from the menu bar.
+
+The app is not signed or notarized yet, so macOS blocks the first launch: right-click the
+app and choose **Open**, or run `xattr -dr com.apple.quarantine /Applications/LoopPrism.app`.
+Point MCP clients at `http://127.0.0.1:4317/<server-name>` (the menu bar icon has
+**Copy proxy URL**). More in [desktop/README.md](desktop/README.md).
+
 ## Claude Code and Codex
 
 The MCP proxy only sees MCP calls. To record everything a coding agent does (shell
@@ -98,7 +119,8 @@ npx loopprism install      # Claude Code and/or Codex, whichever is installed
 lpa status                 # newest runs (after: npm install -g loopprism)
 ```
 
-Claude Code can also use the plugin directly: `/plugin marketplace add AMark-CS/LoopPrism`,
+Start LoopPrism first (the desktop app, or `lprism proxy`), then restart your agent. In Codex,
+run `/hooks` once to trust the new hooks. Claude Code can also use the plugin directly: `/plugin marketplace add AMark-CS/LoopPrism`,
 then `/plugin install loopprism@loopprism`. Details, privacy options and uninstall are in
 [npm/README.md](npm/README.md). Each prompt becomes a run; tool calls become spans.
 
@@ -113,7 +135,7 @@ Agent ──▶ LoopPrism Proxy ──▶ MCP Server
               └── Serves Dashboard (http://localhost:8080)
 ```
 
-Current layers, top to bottom (proxy, trace core, analysis, API / dashboard / CLI):
+Current layers, top to bottom (capture, trace core, analysis, API / dashboard / CLI, packaging):
 
 ![LoopPrism architecture, current state](docs/assets/architecture-current.png)
 
