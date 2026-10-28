@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Query, Request
 
 from ..cost.attribution import CostBreakdown, attribute
+from ..cost.pricing import PRICING_AS_OF, PRICING_SOURCES
 from ..trace.collector import TraceCollector
 
 router = APIRouter(tags=["cost"])
@@ -24,14 +25,20 @@ async def cost_summary(request: Request):
     total_errors = sum(s["error_count"] for s in servers)
     total_data_bytes = sum(s["total_result_bytes"] or 0 for s in servers)
 
-    # Estimate total cost using MVP attribution
-    total_cost_usd = round(total_data_bytes * (0.001 / (10 * 1024)), 6)
+    # Cost comes from the token usage agents report, priced at current API
+    # prices. MCP-only traffic has no token counts, so it adds nothing here.
+    totals = await collector.get_run_totals()
 
     return {
+        "run_count": totals["run_count"],
+        "priced_runs": totals["priced_runs"],
+        "tool_call_count": totals["tool_call_count"],
+        "pricing_as_of": PRICING_AS_OF,
+        "pricing_sources": PRICING_SOURCES,
         "total_tool_calls": total_calls,
         "total_errors": total_errors,
         "total_result_bytes": total_data_bytes,
-        "estimated_cost_usd": total_cost_usd,
+        "estimated_cost_usd": round(totals["total_cost_usd"], 4),
         "mcp_servers": servers,
         "tools": tools,
     }

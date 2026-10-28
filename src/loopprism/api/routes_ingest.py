@@ -14,6 +14,21 @@ router = APIRouter(tags=["ingest"])
 MAX_BODY_BYTES = 2 * 1024 * 1024
 
 
+class ModelUsage(BaseModel):
+    """Token usage of one model during a run (read from the agent's transcript)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    model: str = Field(min_length=1, max_length=200)
+    input_tokens: int = Field(default=0, ge=0)  # uncached input
+    output_tokens: int = Field(default=0, ge=0)
+    cache_read_tokens: int = Field(default=0, ge=0)
+    cache_write_tokens: int = Field(default=0, ge=0)  # 5-minute cache writes
+    cache_write_1h_tokens: int = Field(default=0, ge=0)
+    long_context: bool = False
+    calls: int = Field(default=0, ge=0)
+
+
 class AgentEvent(BaseModel):
     """One lifecycle event from an agent."""
 
@@ -35,6 +50,7 @@ class AgentEvent(BaseModel):
     duration_ms: Optional[float] = None
     error: Optional[str] = None
     outcome: Optional[str] = None
+    usage: Optional[list[ModelUsage]] = Field(default=None, max_length=20)
 
 
 class IngestBatch(BaseModel):

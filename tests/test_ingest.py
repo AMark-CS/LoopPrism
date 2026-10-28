@@ -151,3 +151,47 @@ class TestValidationAndSafety:
     async def test_unknown_extra_fields_are_ignored(self, api):
         r = await send(api, ev("session_start", brand_new_field=1))
         assert r.status_code == 200
+
+
+class TestUsageCost:
+    @pytest.mark.asyncio
+    async def test_stop_with_usage_prices_the_run(self, api, collector):
+        usage = [
+            {
+                "model": "claude-sonnet-5-5",
+                "input_tokens": 1_000_000,
+                "output_tokens": 100_000,
+                "cache_read_tokens": 10_000_000,
+                "cache_write_1h_tokens": 500_000,
+                "calls": 12,
+            },
+            {"model": "mystery-model", "input_tokens": 5},
+        ]
+        r = await send(api, ev("prompt", prompt="go"), ev("stop", usage=usage))
+        assert r.status_code == 200
+
+        (run,) = await runs(collector)
+        # 1M*$2 + 0.1M*$10 + 10M*$0.10 + 0.5M*$4 = 2 + 1 + 1 + 2
+        assert run["total_cost_usd"] == pytest.approx(6.0)
+        trace, _ = await collector.get_trace(run["id"])
+        import json
+
+        rows = json.loads(trace["metadata"])["usage"]
+        assert rows[0]["cost_usd"] == pytest.approx(6.0)
+        assert rows[1]["cost_usd"] is None  # no published price: left unpriced
+
+    @pytest.mark.asyncio
+    async def test_unpriced_models_leave_cost_empty(self, api, collector):
+        await send(api, ev("prompt", prompt="go"), ev("stop", usage=[{"model": "x", "input_tokens": 9}]))
+        (run,) = await runs(collector)
+        assert run["total_cost_usd"] is None
+
+    @pytest.mark.asyncio
+    async def test_cost_summary_sums_run_costs(self, api, collector):
+        usage = [{"model": "claude-opus-5-5", "output_tokens": 1_000_000}]  # $20
+        await send(api, ev("prompt", prompt="a", session="s1"), ev("tool", tool_name="Bash", session="s1"), ev("stop", session="s1", usage=usage))
+        await send(api, ev("prompt", prompt="b", session="s2"), ev("stop", session="s2"))
+        s = (await api.get("/api/cost/summary")).json()
+        assert s["estimated_cost_usd"] == 20.0
+        assert (s["run_count"], s["priced_runs"], s["tool_call_count"]) == (2, 1, 1)
+        assert s["pricing_as_of"]

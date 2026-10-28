@@ -17,6 +17,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { baseUrl } = require('./config');
+const { turnUsage } = require('./usage');
 
 const EVENTS = {
   SessionStart: 'session_start',
@@ -112,8 +113,13 @@ async function main(argv = process.argv, env = process.env) {
   const agent = i >= 0 && argv[i + 1] ? argv[i + 1] : 'unknown';
   try {
     if (env.LOOPPRISM_DISABLE === '1' || inBackoff()) return;
-    const event = buildEvent(JSON.parse((await readStdin()) || '{}'), agent, env);
+    const input = JSON.parse((await readStdin()) || '{}');
+    const event = buildEvent(input, agent, env);
     if (!event) return;
+    if (event.event === 'stop') {
+      const usage = turnUsage(agent, input, env);
+      if (usage.length) event.usage = usage;
+    }
     try {
       await send(event);
     } catch (err) {

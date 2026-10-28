@@ -19,6 +19,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+from ..cost.pricing import usage_cost
 from .collector import TraceCollector
 
 AGENT_RUN = "agent.run"
@@ -159,8 +160,23 @@ class AgentIngestor:
         if run_id is None:
             return {"closed": None}
         await self.collector.finalize_trace(run_id)
+        if event.get("usage"):
+            await self._record_usage(run_id, event["usage"])
         status = default_status
         if event.get("outcome") == "failed":
             status = "failed"
         await self.collector.close_run(run_id, status, event.get("outcome"))
         return {"closed": run_id, "status": status}
+
+    async def _record_usage(self, run_id: str, usage: list[dict[str, Any]]) -> None:
+        """Price the run's token usage at the current API prices and store it."""
+        rows = []
+        total: Optional[float] = None
+        for u in usage:
+            cost = usage_cost(u["model"], u)
+            if cost is not None:
+                total = (total or 0.0) + cost
+            rows.append({**u, "cost_usd": None if cost is None else round(cost, 6)})
+        await self.collector.record_run_usage(
+            run_id, None if total is None else round(total, 6), rows
+        )

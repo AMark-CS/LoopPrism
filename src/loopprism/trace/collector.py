@@ -218,6 +218,53 @@ class TraceCollector:
         )
         await self._conn.commit()
 
+    async def record_run_usage(
+        self,
+        trace_id: str,
+        total_cost_usd: Optional[float],
+        usage: list[dict[str, Any]],
+    ) -> None:
+        """Store a run's token usage and its estimated cost.
+
+        ``usage`` rows are kept in the run's metadata; ``total_cost_usd`` is
+        None when none of the models has a known price.
+        """
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            "SELECT metadata FROM traces WHERE id = ?", (trace_id,)
+        )
+        row = await cursor.fetchone()
+        if row is None:
+            return
+        try:
+            metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+        except (TypeError, ValueError):
+            metadata = {}
+        metadata["usage"] = usage
+        await self._conn.execute(
+            "UPDATE traces SET total_cost_usd = ?, metadata = ? WHERE id = ?",
+            (total_cost_usd, json.dumps(metadata), trace_id),
+        )
+        await self._conn.commit()
+
+    async def get_run_totals(self) -> dict[str, Any]:
+        """Run count and summed estimated cost across all runs."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """SELECT COUNT(*) AS run_count,
+                      COUNT(total_cost_usd) AS priced_runs,
+                      COALESCE(SUM(total_cost_usd), 0) AS total_cost_usd
+               FROM traces"""
+        )
+        totals = dict(await cursor.fetchone())
+        # Every tool call: MCP calls seen by the proxy and agent hook events.
+        cursor = await self._conn.execute(
+            """SELECT COUNT(*) FROM spans
+               WHERE span_type IN ('mcp.tool.call', 'agent.tool.call')"""
+        )
+        totals["tool_call_count"] = (await cursor.fetchone())[0]
+        return totals
+
     _SOURCE_RANK = {"heuristic": 1, "session": 2, "explicit": 3}
 
     async def tag_run(

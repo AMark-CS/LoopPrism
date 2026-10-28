@@ -14,6 +14,8 @@ from loopprism.cost.pricing import (
     ModelPricing,
     cost_from_tokens,
     get_pricing,
+    normalize_model,
+    usage_cost,
 )
 
 
@@ -37,7 +39,7 @@ class TestPricing:
         """Test Anthropic pricing lookup."""
         p = get_pricing("anthropic", "claude-opus-4-8")
         assert p is not None
-        assert p.input_cost_per_m == 15.0
+        assert (p.input_cost_per_m, p.output_cost_per_m) == (5.0, 25.0)
 
     def test_get_pricing_partial_match(self):
         """Test partial model name matching."""
@@ -57,7 +59,7 @@ class TestPricing:
             input_tokens=1_000_000,
             output_tokens=1_000_000,
         )
-        assert cost == 90.0
+        assert cost == 30.0  # $5 + $25
 
     def test_cost_from_tokens_ollama_free(self):
         """Test local models are priced at $0."""
@@ -68,6 +70,55 @@ class TestPricing:
             output_tokens=1_000_000,
         )
         assert cost == 0.0
+
+
+class TestCurrentPrices:
+    """Spot checks against the published price lists (see PRICING_AS_OF)."""
+
+    def test_normalize_model(self):
+        assert normalize_model("claude-opus-4-5-20251101") == "claude-opus-4-5"
+        assert normalize_model("us.anthropic.claude-sonnet-5-5-v1:0") == "claude-sonnet-5-5"
+        assert normalize_model("claude-sonnet-5-5[1m]") == "claude-sonnet-5-5"
+        assert normalize_model("claude-opus-4.8") == "claude-opus-4-8"
+        assert normalize_model("GPT-6.1-Sol") == "gpt-6.1-sol"
+
+    def test_anthropic_cache_pricing(self):
+        # Sonnet 5.5: $2 in / $10 out, 1h write $4, cache read $0.10.
+        cost = usage_cost(
+            "claude-sonnet-5-5",
+            {
+                "input_tokens": 1_000_000,
+                "output_tokens": 1_000_000,
+                "cache_read_tokens": 1_000_000,
+                "cache_write_1h_tokens": 1_000_000,
+            },
+        )
+        assert cost == pytest.approx(2 + 10 + 0.10 + 4)
+
+    def test_newest_model_cache_read_multiplier(self):
+        # Opus 5.5 cache hits are 0.05x input, Opus 5 stays at 0.1x.
+        assert usage_cost("claude-opus-5-5", {"cache_read_tokens": 1_000_000}) == pytest.approx(0.20)
+        assert usage_cost("claude-opus-5", {"cache_read_tokens": 1_000_000}) == pytest.approx(0.50)
+
+    def test_haiku_long_context_tier(self):
+        short = usage_cost("claude-haiku-5-5", {"input_tokens": 1_000_000})
+        long = usage_cost("claude-haiku-5-5", {"input_tokens": 1_000_000, "long_context": True})
+        assert (short, long) == (pytest.approx(0.10), pytest.approx(0.50))
+
+    def test_openai_pricing(self):
+        assert usage_cost(
+            "gpt-6.1-sol",
+            {"input_tokens": 1_000_000, "cache_read_tokens": 1_000_000, "output_tokens": 1_000_000},
+        ) == pytest.approx(2 + 0.10 + 10)
+
+    def test_unknown_model_has_no_price(self):
+        assert usage_cost("codex-auto-review", {"input_tokens": 5}) is None
+
+    def test_user_override(self, tmp_path, monkeypatch):
+        f = tmp_path / "pricing.json"
+        f.write_text('{"my-model": {"input": 1, "output": 2}}')
+        monkeypatch.setenv("LOOPPRISM_PRICING_FILE", str(f))
+        assert usage_cost("my-model", {"input_tokens": 1_000_000, "output_tokens": 1_000_000}) == 3
 
 
 class TestReconstructMCPSpans:
