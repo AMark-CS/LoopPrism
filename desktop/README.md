@@ -9,7 +9,8 @@ menu bar (macOS) or system tray (Windows).
 
 ### Windows (x64)
 
-1. Download `LoopPrism-<version>-x64.exe` from the [Releases](https://github.com/AMark-CS/LoopPrism/releases) page and run it.
+1. Download `LoopPrism-<version>-x64.exe` from the [Releases](https://github.com/AMark-CS/LoopPrism/releases) page (the
+   pre-release named "LoopPrism for Windows", tagged `desktop-win-v*`) and run it.
    It installs for the current user (no administrator prompt) and starts LoopPrism.
 2. The installer is not code-signed, so Windows SmartScreen may say "Windows protected your PC":
    click **More info → Run anyway**.
@@ -115,6 +116,11 @@ git tag desktop-v0.1.0 && git push origin desktop-v0.1.0
 runners and x64 on a Windows runner (the sidecar must be frozen per architecture and
 per OS), and attaches the `.dmg`, `.zip` and `.exe` files to a GitHub Release. It can also be run manually
 (`workflow_dispatch`) to produce artifacts without a release.
+
+The Windows preview is published by `.github/workflows/release-windows-preview.yml` when a tag
+`desktop-win-v<version>` (matching `desktop/package.json`) is pushed. It builds the installer, runs
+`scripts/smoke-windows.ps1` against the installed app, and creates a GitHub *pre-release*. The tag is
+not `desktop-v*`, so the macOS release workflow and every app's updater ignore it.
 
 Locally on Windows: `cd desktop && npm ci && npm run dist` (with `PYTHON` pointing at a Python that
 has `pip install . pyinstaller`) produces `release/LoopPrism-<version>-x64.exe`.
