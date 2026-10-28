@@ -1,0 +1,94 @@
+name: Release desktop app
+
+# Push a tag like `desktop-v0.1.0` to build the macOS app and publish a
+# GitHub Release with the .dmg and .zip artifacts.
+on:
+  push:
+    tags:
+      - "desktop-v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The PyInstaller sidecar is frozen per-architecture, so each arch
+          # builds natively on its own runner.
+          - arch: arm64
+            runner: macos-14
+          - arch: x64
+            runner: macos-15-intel
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install LoopPrism and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          # Non-editable install so PyInstaller bundles the package together
+          # with src/loopprism/dashboard/dist (the built dashboard).
+          python -m pip install . pyinstaller
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build app (sidecar + electron-builder)
+        working-directory: desktop
+        run: npm run dist
+        env:
+          # Optional signing/notarization. Without these secrets the app is
+          # ad-hoc signed and users must bypass Gatekeeper (see desktop/README.md).
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LoopPrism-${{ matrix.arch }}
+          path: |
+            desktop/release/*.dmg
+            desktop/release/*.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/desktop-v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$TAG" artifacts/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "LoopPrism Desktop ${TAG#desktop-v}" \
+            --generate-notes \
+            --notes "Unsigned macOS builds: right-click the app → Open on first launch, or run \`xattr -dr com.apple.quarantine /Applications/LoopPrism.app\`. See desktop/README.md."

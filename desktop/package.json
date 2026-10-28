@@ -1,0 +1,20 @@
+{
+  "name": "loopprism-desktop",
+  "productName": "LoopPrism",
+  "version": "0.1.0",
+  "description": "LoopPrism desktop app \u2014 MCP observability proxy and dashboard in one app",
+  "main": "src/main.js",
+  "author": "Mark Zhang",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "sidecar": "./scripts/build-sidecar.sh",
+    "pack": "npm run sidecar && electron-builder --config electron-builder.config.js --dir",
+    "dist": "npm run sidecar && electron-builder --config electron-builder.config.js"
+  },
+  "devDependencies": {
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0"
+  }
+}

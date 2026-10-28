@@ -1,0 +1,7 @@
+node_modules/
+release/
+sidecar/dist/
+sidecar/build/
+.venv/
+*.log
+!/build/
