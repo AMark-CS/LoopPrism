@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { app } = require("electron");
+const { atomicWrite } = require("./fsutil");
 
 const AGENTS = [
   {
@@ -182,8 +183,7 @@ function writeAgentJson(config) {
     fs.rmSync(file, { force: true });
     return;
   }
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  atomicWrite(file, `${JSON.stringify(config, null, 2)}\n`);
 }
 
 function withoutOurs(config) {

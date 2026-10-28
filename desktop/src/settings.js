@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { atomicWrite } = require("./fsutil");
 
 const DEFAULTS = {
   proxyPort: 4317,
@@ -44,8 +45,7 @@ class Settings {
       throw new Error("Proxy and dashboard need different ports.");
     }
     this.values = next;
-    fs.mkdirSync(path.dirname(this.file), { recursive: true });
-    fs.writeFileSync(this.file, JSON.stringify(next, null, 2));
+    atomicWrite(this.file, JSON.stringify(next, null, 2));
     return this.all();
   }
 }

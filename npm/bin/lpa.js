@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const claude = require('../lib/claude');
+const { atomicWrite } = require('../lib/fsutil');
 const codex = require('../lib/codex');
 const { configPath } = require('../plugin/scripts/config');
 const viewer = require('../plugin/scripts/viewer');
@@ -38,7 +39,7 @@ function pick(targets) {
 function saveUrl(url) {
   const file = configPath();
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify({ url }, null, 2)}\n`);
+  atomicWrite(file, `${JSON.stringify({ url }, null, 2)}\n`);
 }
 
 async function main(argv) {

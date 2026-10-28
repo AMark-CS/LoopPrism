@@ -64,6 +64,11 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      # A tag must not publish a Windows build that cannot install, start or update itself.
+      - name: Smoke test the Windows installer
+        if: runner.os == 'Windows'
+        run: ./desktop/scripts/smoke-windows.ps1
+
       - uses: actions/upload-artifact@v4
         with:
           name: LoopPrism-${{ matrix.name }}

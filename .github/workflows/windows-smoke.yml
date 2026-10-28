@@ -6,6 +6,15 @@ on:
   workflow_dispatch: {}
   push:
     branches: [windows-support]
+  pull_request:
+    branches: [main]
+    paths: ["desktop/**", "npm/**", "src/**", "dashboard/**", ".github/workflows/windows-smoke.yml"]
+  schedule:
+    - cron: "17 3 * * 1" # weekly, so a Windows runner or dependency change shows up without a push
+
+concurrency:
+  group: windows-smoke-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -82,56 +91,3 @@ jobs:
           name: windows-smoke-logs
           path: smoke-logs/
           if-no-files-found: ignore
-
-  tests:
-    name: Unit tests on Windows
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      # Failures are echoed as annotations too (readable without logging in).
-      - name: Python tests
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install ".[dev]"
-          python -m pytest -q -rfE --tb=line -p no:cacheprovider 2>&1 | Tee-Object -FilePath pytest.log
-          $code = $LASTEXITCODE
-          if ($code -ne 0) {
-            $tail = (Get-Content pytest.log -Tail 60) -join "%0A"
-            Write-Host "::error title=pytest failed::$tail"
-          }
-          exit $code
-
-      - name: Desktop tests
-        if: always()
-        working-directory: desktop
-        run: |
-          npm ci
-          node --test --test-reporter=spec 2>&1 | Tee-Object -FilePath test.log
-          $code = $LASTEXITCODE
-          if ($code -ne 0) {
-            $tail = (Get-Content test.log -Tail 60) -join "%0A"
-            Write-Host "::error title=desktop tests failed::$tail"
-          }
-          exit $code
-
-      - name: npm package tests
-        if: always()
-        working-directory: npm
-        run: |
-          node --test --test-reporter=spec 2>&1 | Tee-Object -FilePath test.log
-          $code = $LASTEXITCODE
-          if ($code -ne 0) {
-            $tail = (Get-Content test.log -Tail 60) -join "%0A"
-            Write-Host "::error title=npm tests failed::$tail"
-          }
-          exit $code

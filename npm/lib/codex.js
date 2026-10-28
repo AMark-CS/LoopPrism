@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { packageRoot, stableDirs, codexHome } = require('./paths');
+const { atomicWrite, backupOnce } = require('./fsutil');
 
 const MARKER = path.join('.loopprism', 'hooks', 'hook.js');
 const WANTED = [
@@ -58,15 +59,15 @@ function install({ home, env = process.env } = {}) {
   const file = path.join(codexHome(env, home), 'hooks.json');
   const config = stripOurs(readJson(file));
   addOurs(config, path.join(dirs.hooks, 'hook.js'));
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `${JSON.stringify(config, null, 2)}\n`);
+  backupOnce(file); // the user's own file: keep how it was before we first touched it
+  atomicWrite(file, `${JSON.stringify(config, null, 2)}\n`);
   return { file, hookScript: path.join(dirs.hooks, 'hook.js') };
 }
 
 function uninstall({ home, env = process.env } = {}) {
   const file = path.join(codexHome(env, home), 'hooks.json');
   if (fs.existsSync(file)) {
-    fs.writeFileSync(file, `${JSON.stringify(stripOurs(readJson(file)), null, 2)}\n`);
+    atomicWrite(file, `${JSON.stringify(stripOurs(readJson(file)), null, 2)}\n`);
   }
   fs.rmSync(stableDirs(home).hooks, { recursive: true, force: true });
   return { file };
