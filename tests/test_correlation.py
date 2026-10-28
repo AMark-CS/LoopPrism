@@ -276,3 +276,37 @@ class TestProxyCorrelation:
         traces = await runs(collector)
         assert len(traces) == 1
         assert traces[0]["span_count"] == 2
+
+
+class TestSessionLabelling:
+    """A run opened at initialize learns its session id from the response."""
+
+    @pytest.mark.asyncio
+    async def test_initialize_run_is_labelled_with_issued_session(self, proxy):
+        client, collector, _ = proxy
+        init = {"jsonrpc": "2.0", "id": "i", "method": "initialize", "params": {}}
+        client.post("/mock", json=init)
+        client.post(
+            "/mock", json=tools_call(), headers={"Mcp-Session-Id": "srv-session-1"}
+        )
+        (trace,) = await runs(collector)
+        assert trace["session_id"] == "srv-session-1"
+        assert trace["conversation_id"] == "srv-session-1"
+        assert trace["correlation_source"] == SESSION
+
+    @pytest.mark.asyncio
+    async def test_tag_run_never_downgrades_or_overwrites(self, collector):
+        tid = await collector.create_trace(
+            session_id="first", correlation_source="explicit"
+        )
+        await collector.tag_run(tid, session_id="second", correlation_source="heuristic")
+        trace, _ = await collector.get_trace(tid)
+        assert trace["session_id"] == "first"
+        assert trace["correlation_source"] == "explicit"
+
+        t2 = await collector.create_trace(correlation_source="heuristic")
+        await collector.tag_run(t2, session_id="s", correlation_source="session")
+        await collector.tag_run(t2, correlation_source="heuristic")
+        trace2, _ = await collector.get_trace(t2)
+        assert trace2["correlation_source"] == "session"
+        assert trace2["session_id"] == "s"

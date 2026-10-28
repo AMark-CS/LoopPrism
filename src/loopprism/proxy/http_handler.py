@@ -15,7 +15,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from ..trace.collector import TraceCollector
-from ..trace.correlation import Correlation, RunCorrelator
+from ..trace.correlation import SESSION, Correlation, RunCorrelator
 from ..trace.mcp_semantics import MCPProtocol, ParsedMCPRequest
 from ..utils.logging import logger
 
@@ -124,6 +124,13 @@ class MCPHttpHandler:
 
         # Ensure trace exists
         await self._ensure_trace(correlation, parsed)
+        if correlation.session_id:
+            # The run may have been opened earlier without a session id.
+            await self.collector.tag_run(
+                trace_id,
+                session_id=correlation.session_id,
+                correlation_source=correlation.source,
+            )
 
         attributes = {
             "backend_url": backend_url,
@@ -171,6 +178,9 @@ class MCPHttpHandler:
         issued_session = response.headers.get("mcp-session-id")
         if issued_session and not correlation.session_id:
             self.correlator.bind_session(server_name, issued_session, correlation)
+            await self.collector.tag_run(
+                trace_id, session_id=issued_session, correlation_source=SESSION
+            )
 
         # Extract response body for tracing
         response_body_bytes = b""

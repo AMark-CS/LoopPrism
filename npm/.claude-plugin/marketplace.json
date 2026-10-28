@@ -1,0 +1,13 @@
+{
+  "name": "loopprism",
+  "owner": { "name": "Mark Zhang" },
+  "metadata": { "description": "LoopPrism observability plugin for Claude Code" },
+  "plugins": [
+    {
+      "name": "loopprism",
+      "source": "./plugin",
+      "description": "Record every prompt, tool call and error from Claude Code as runs in LoopPrism.",
+      "version": "0.1.0"
+    }
+  ]
+}

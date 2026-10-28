@@ -1,0 +1,14 @@
+{
+  "name": "loopprism",
+  "version": "0.1.0",
+  "description": "Install the LoopPrism hooks for Claude Code and Codex, and check what your agents did.",
+  "license": "MIT",
+  "author": "Mark Zhang",
+  "homepage": "https://github.com/AMark-CS/LoopPrism",
+  "repository": { "type": "git", "url": "git+https://github.com/AMark-CS/LoopPrism.git", "directory": "npm" },
+  "keywords": ["claude-code", "codex", "observability", "tracing", "hooks", "mcp", "agent"],
+  "bin": { "lpa": "bin/lpa.js" },
+  "files": ["bin", "lib", "plugin", ".claude-plugin", "README.md"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test" }
+}

@@ -276,3 +276,20 @@ class TestAttribute:
                 assert sum(i.proportion for i in mcp_items) == pytest.approx(
                     1.0, abs=0.01
                 )
+
+
+class TestErrorPenaltyInTotal:
+    def test_proportions_sum_to_one_with_errors(self):
+        spans = [
+            {"id": "a", "span_type": "mcp.tool.call", "mcp_server_name": "s",
+             "tool_name": "ok", "result_size_bytes": 5000, "latency_ms": 1,
+             "result_is_error": 0, "start_time": "2026-01-01T00:00:00"},
+            {"id": "b", "span_type": "mcp.tool.call", "mcp_server_name": "s",
+             "tool_name": "bad", "result_size_bytes": 100, "latency_ms": 1,
+             "result_is_error": 1, "start_time": "2026-01-01T00:00:01"},
+        ]
+        from loopprism.cost.attribution import attribute
+
+        breakdown = attribute(spans, pricing_func=None)
+        assert abs(sum(i.proportion for i in breakdown.items) - 1) < 1e-6
+        assert breakdown.total_cost_usd >= 0.001

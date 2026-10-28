@@ -87,6 +87,21 @@ Visit `http://localhost:8080` — every MCP tool call appears in real time with:
 - Cost breakdown by tool
 - MCP server health stats
 
+## Claude Code and Codex
+
+The MCP proxy only sees MCP calls. To record everything a coding agent does (shell
+commands, file edits, built-in tools, and the prompt behind each piece of work), install
+the hooks:
+
+```bash
+npx loopprism install      # Claude Code and/or Codex, whichever is installed
+lpa status                 # newest runs (after: npm install -g loopprism)
+```
+
+Claude Code can also use the plugin directly: `/plugin marketplace add AMark-CS/LoopPrism`,
+then `/plugin install loopprism@loopprism`. Details, privacy options and uninstall are in
+[npm/README.md](npm/README.md). Each prompt becomes a run; tool calls become spans.
+
 ## Architecture
 
 ```

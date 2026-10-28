@@ -94,7 +94,8 @@ while closing a run is a separate operation.
 - [x] `seq` assigned per run; `get_trace` orders by it
 - [x] `attributes_json` merge fixed (was concatenating two JSON objects into invalid JSON)
 - [x] `create_trace` accepts `session_id`, `correlation_source`
-- [ ] Run close / idle timeout / `abandoned`
+- [x] Run close and `abandoned` for agent hook runs (`collector.close_run`); the proxy still has no idle close
+- [x] Agent events: `POST /api/ingest/events` (`trace/ingest.py`) turns Claude Code / Codex hooks into runs and `agent.tool.call` spans
 - [x] Correlation ladder in the proxy (`trace/correlation.py`)
 - [ ] Payload table and redaction
 - [ ] W3C IDs

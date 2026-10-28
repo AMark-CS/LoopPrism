@@ -190,6 +190,68 @@ class TraceCollector:
         await self._conn.commit()
         return tid
 
+    async def find_open_run(self, session_id: str) -> Optional[str]:
+        """Id of the newest still-running run for a session, if any."""
+        assert self._conn is not None
+        cursor = await self._conn.execute(
+            """SELECT id FROM traces
+               WHERE session_id = ? AND status = 'running'
+               ORDER BY timestamp DESC, rowid DESC LIMIT 1""",
+            (session_id,),
+        )
+        row = await cursor.fetchone()
+        return row["id"] if row else None
+
+    async def close_run(
+        self,
+        trace_id: str,
+        status: str = "succeeded",
+        outcome: Optional[str] = None,
+    ) -> None:
+        """Mark a run finished (succeeded / failed / abandoned)."""
+        assert self._conn is not None
+        await self._conn.execute(
+            """UPDATE traces SET status = ?, ended_at = datetime('now'),
+               outcome = COALESCE(?, outcome)
+               WHERE id = ? AND status = 'running'""",
+            (status, outcome, trace_id),
+        )
+        await self._conn.commit()
+
+    _SOURCE_RANK = {"heuristic": 1, "session": 2, "explicit": 3}
+
+    async def tag_run(
+        self,
+        trace_id: str,
+        session_id: Optional[str] = None,
+        correlation_source: Optional[str] = None,
+    ) -> None:
+        """Fill in correlation details learned after the run was created.
+
+        A run opened at ``initialize`` has no session id yet; the server issues
+        one in its response. ``session_id`` is only set if still empty, and
+        ``correlation_source`` only ever moves to a more trustworthy value
+        (heuristic < session < explicit).
+        """
+        assert self._conn is not None
+        await self._conn.execute(
+            """UPDATE traces SET
+               session_id = COALESCE(session_id, ?),
+               conversation_id = COALESCE(conversation_id, ?)
+               WHERE id = ?""",
+            (session_id, session_id, trace_id),
+        )
+        new_rank = self._SOURCE_RANK.get(correlation_source or "", 0)
+        if new_rank:
+            await self._conn.execute(
+                """UPDATE traces SET correlation_source = ?
+                   WHERE id = ? AND (CASE COALESCE(correlation_source, '')
+                       WHEN 'explicit' THEN 3 WHEN 'session' THEN 2
+                       WHEN 'heuristic' THEN 1 ELSE 0 END) < ?""",
+                (correlation_source, trace_id, new_rank),
+            )
+        await self._conn.commit()
+
     async def finalize_trace(self, trace_id: str) -> None:
         """Compute and update summary stats for a completed trace."""
         assert self._conn is not None
@@ -197,7 +259,7 @@ class TraceCollector:
         cursor = await self._conn.execute(
             """SELECT
                 COUNT(*) as span_count,
-                SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count,
+                COALESCE(SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END), 0) as error_count,
                 MAX(end_time) as latest_end,
                 MIN(start_time) as earliest_start,
                 SUM(latency_ms) as total_latency_ms
@@ -264,11 +326,14 @@ class TraceCollector:
         tool_call_id: Optional[str] = None,
         attributes: Optional[dict[str, Any]] = None,
         step_index: Optional[int] = None,
+        started_at: Optional[str] = None,
     ) -> str:
         """Start a new span. Returns the span_id.
 
         Each span gets ``seq``, its position within the run, assigned in the
         same statement as the insert so ordering never depends on timestamps.
+        ``started_at`` (UTC, ``YYYY-MM-DD HH:MM:SS[.fff]``) backdates the start
+        for events that are reported after the fact.
         """
         assert self._conn is not None
         sid = str(uuid.uuid4())
@@ -286,7 +351,7 @@ class TraceCollector:
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                        (SELECT COALESCE(MAX(seq), 0) + 1 FROM spans
                         WHERE trace_id = ?),
-                       datetime('now'))""",
+                       COALESCE(?, datetime('now')))""",
             (
                 sid,
                 trace_id,
@@ -304,6 +369,7 @@ class TraceCollector:
                 span_type_str,
                 step_index,
                 trace_id,
+                started_at,
             ),
         )
         await self._conn.commit()

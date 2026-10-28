@@ -1,0 +1,11 @@
+{
+  "name": "loopprism",
+  "displayName": "LoopPrism",
+  "version": "0.1.0",
+  "description": "See what your agent actually did: every prompt, tool call and error, recorded as runs in LoopPrism.",
+  "author": { "name": "Mark Zhang" },
+  "homepage": "https://github.com/AMark-CS/LoopPrism",
+  "repository": "https://github.com/AMark-CS/LoopPrism",
+  "license": "MIT",
+  "keywords": ["observability", "tracing", "hooks", "mcp"]
+}

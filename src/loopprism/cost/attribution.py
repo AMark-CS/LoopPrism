@@ -356,6 +356,7 @@ def _attribute_mvp(
 
         # Add error penalty
         if tool.is_error:
+            total_cost += 0.001  # counted in the total so proportions sum to 1
             items.append(
                 CostItem(
                     source=f"ERROR:{tool.mcp_server}/{tool.tool_name}",

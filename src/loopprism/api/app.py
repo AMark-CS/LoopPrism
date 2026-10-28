@@ -10,7 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from ..trace.collector import TraceCollector
+from ..trace.ingest import AgentIngestor
 from .routes_cost import router as cost_router
+from .routes_ingest import router as ingest_router
 from .routes_mcp import router as mcp_router
 from .routes_traces import router as traces_router
 
@@ -44,11 +46,13 @@ def create_app(
 
     # Inject collector into app state
     app.state.collector = collector
+    app.state.ingestor = AgentIngestor(collector)
 
     # Register API routers
     app.include_router(traces_router, prefix="/api")
     app.include_router(mcp_router, prefix="/api")
     app.include_router(cost_router, prefix="/api")
+    app.include_router(ingest_router, prefix="/api")
 
     # Health check
     @app.get("/api/health")
