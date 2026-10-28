@@ -15,6 +15,7 @@ from ..trace.ingest import AgentIngestor
 from .routes_cost import router as cost_router
 from .routes_ingest import router as ingest_router
 from .routes_mcp import router as mcp_router
+from .routes_sessions import router as sessions_router
 from .routes_traces import router as traces_router
 
 
@@ -38,9 +39,11 @@ def create_app(
     )
 
     # CORS
+    # Only pages served from this machine may call the API from a browser;
+    # session content must not be readable by arbitrary websites.
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$",
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -53,6 +56,7 @@ def create_app(
     app.include_router(traces_router, prefix="/api")
     app.include_router(mcp_router, prefix="/api")
     app.include_router(cost_router, prefix="/api")
+    app.include_router(sessions_router, prefix="/api")
     app.include_router(ingest_router, prefix="/api")
 
     # Health check
