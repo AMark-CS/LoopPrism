@@ -26,6 +26,7 @@ CONTEXT_TAGS = (
     "<user-prompt-submit-hook>",
 )
 LONG_CONTEXT_TOKENS = 100_000
+MAX_MODEL_MS = 30 * 60 * 1000
 SEARCH_TEXT_CAP = 150_000
 
 
@@ -252,7 +253,10 @@ def parse(path: str) -> ParsedSession:
                     sidechain=bool(r.get("isSidechain")),
                     first_event=len(ps.events),
                 )
-                req = pending_requests.pop(0) if pending_requests else None
+                # The request that produced this response is the latest one logged
+                # before it; earlier unmatched ones were aborted or background calls.
+                req = pending_requests[-1] if pending_requests else None
+                pending_requests.clear()
                 if req is not None:
                     step.request_ts = req.get("timestamp")
                     step.refs = request_lists.get(req.get("id", ""))
@@ -305,7 +309,9 @@ def parse(path: str) -> ParsedSession:
         if cost is not None:
             total_cost = (total_cost or 0.0) + cost
         if st.request_ts and st.end_ts:
-            st.model_ms = _ms(st.request_ts, st.end_ts)
+            d = _ms(st.request_ts, st.end_ts)
+            # A model call lasting over 30 minutes is a mispairing, not data.
+            st.model_ms = d if d is not None and d <= MAX_MODEL_MS else None
     # Resolve event.step for events created before their step existed is not
     # needed: every assistant event is created with its step.
 

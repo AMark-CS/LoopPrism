@@ -151,6 +151,12 @@ async def get_context_step(session_id: str, step: int, request: Request, detail:
     return await asyncio.to_thread(context.step_context, ps, step, detail)
 
 
+@router.get("/{session_id}/cost")
+async def get_cost(session_id: str, request: Request):
+    ps = await _load(request, session_id)
+    return await asyncio.to_thread(analysis.cost_breakdown, ps)
+
+
 @router.get("/{session_id}/timing")
 async def get_timing(session_id: str, request: Request):
     ps = await _load(request, session_id)

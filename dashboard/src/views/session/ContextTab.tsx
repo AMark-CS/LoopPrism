@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronRight, HelpCircle } from 'lucide-react';
-import { useContextOverview, useStepContext, useTiming } from '../../hooks/useSessions';
+import { useContextOverview, useCostBreakdown, useStepContext, useTiming } from '../../hooks/useSessions';
 import { Badge, Card, Empty } from '../../components/ui';
 import {
   CATEGORY_COLORS,
@@ -23,6 +23,112 @@ const ORDER: CategoryKey[] = [
   'unattributed',
 ];
 
+const TYPE_COLORS: Record<string, string> = {
+  input: '#6366f1',
+  cache_read: '#14b8a6',
+  cache_write: '#f59e0b',
+  output: '#ec4899',
+};
+const MODEL_COLORS = ['#8b5cf6', '#3b82f6', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6'];
+const COST_HINTS: Record<string, string> = {
+  input: 'Input tokens that were not served from the prompt cache',
+  cache_read: 'Re-reading the conversation so far from the prompt cache, once per step',
+  cache_write: 'Writing new content into the prompt cache',
+  output: 'Tokens the model generated (answers, thinking, tool-call arguments)',
+};
+
+function CostDistribution({ id }: { id: string }) {
+  const { data } = useCostBreakdown(id);
+  const [view, setView] = useState<'type' | 'category' | 'model'>('type');
+  if (!data || !data.total_usd) return null;
+  const rows =
+    view === 'type'
+      ? data.by_type.map((r) => ({ key: r.key, label: r.label, usd: r.usd, color: TYPE_COLORS[r.key], hint: COST_HINTS[r.key] }))
+      : view === 'category'
+        ? data.by_category.map((r) => ({
+            key: r.key,
+            label: r.label,
+            usd: r.usd,
+            color: r.key === 'output' ? TYPE_COLORS.output : CATEGORY_COLORS[r.key] ?? '#6b7280',
+            hint: r.key === 'output' ? COST_HINTS.output : 'Input-side cost (fresh + cached) shared by how much of each step’s context this was',
+          }))
+        : data.by_model.map((r, i) => ({ key: r.model, label: r.model, usd: r.usd, color: MODEL_COLORS[i % MODEL_COLORS.length], hint: '' }));
+  const total = rows.reduce((a, r) => a + r.usd, 0) || 1;
+  const turns = data.by_turn.slice(-60);
+  const maxTurn = Math.max(...turns.map((t) => t.usd), 0.0001);
+  return (
+    <Card
+      title="Cost Distribution"
+      right={
+        <div className="flex items-center gap-2">
+          <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">{formatUsd(data.total_usd)} at API prices</span>
+          <div className="flex gap-1">
+            {([['type', 'Token type'], ['category', 'Context'], ['model', 'Model']] as const).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setView(k)}
+                className={`rounded px-2 py-0.5 text-[11px] ${
+                  view === k ? 'bg-[var(--color-foreground)] text-[var(--color-background)]' : 'text-[var(--color-muted-foreground)]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <div className="flex flex-wrap items-start gap-6">
+        <Donut data={rows.map((r) => ({ key: r.key, value: r.usd, color: r.color }))} center={formatUsd(data.total_usd)} sub="Total" />
+        <div className="min-w-[260px] flex-1 space-y-2.5">
+          {rows.map((r) => (
+            <div key={r.key} title={r.hint}>
+              <div className="flex items-center gap-2 text-xs">
+                <i className="inline-block h-2 w-2 shrink-0 rounded-sm" style={{ background: r.color }} />
+                <span className="truncate">{r.label}</span>
+                <span className="ml-auto tabular-nums">{formatUsd(r.usd)}</span>
+                <span className="w-12 text-right tabular-nums text-[var(--color-muted-foreground)]">
+                  {Math.round((r.usd / total) * 100)}%
+                </span>
+              </div>
+              <div className="mt-1 h-1 rounded bg-[var(--color-background)]">
+                <div className="h-1 rounded" style={{ width: `${(r.usd / total) * 100}%`, background: r.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {turns.length > 1 && (
+        <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+          <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
+            <span>Cost per turn</span>
+            <span>
+              Priciest steps:{' '}
+              {data.top_steps.slice(0, 3).map((s) => `#${s.step + 1} ${formatUsd(s.usd)}`).join(' · ')}
+            </span>
+          </div>
+          <div className="flex h-12 items-end gap-px">
+            {turns.map((t) => (
+              <div
+                key={t.turn}
+                title={`Turn ${t.turn}: ${formatUsd(t.usd)}`}
+                className="flex-1 rounded-t-sm bg-[#8b5cf6]"
+                style={{ height: `${Math.max(4, (t.usd / maxTurn) * 100)}%` }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      {data.unpriced_steps > 0 && (
+        <div className="mt-2 text-[10px] text-[var(--color-muted-foreground)]">
+          {data.unpriced_steps} steps use a model without a published price and are not counted.
+        </div>
+      )}
+    </Card>
+  );
+}
+
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-3" title={hint}>
@@ -40,7 +146,7 @@ function Donut({
   center,
   sub,
 }: {
-  data: { key: string; value: number }[];
+  data: { key: string; value: number; color?: string }[];
   center: string;
   sub: string;
 }) {
@@ -48,9 +154,9 @@ function Donut({
     <div className="relative h-32 w-32 shrink-0">
       <ResponsiveContainer>
         <PieChart>
-          <Pie data={data} dataKey="value" innerRadius={42} outerRadius={60} stroke="none" paddingAngle={1}>
+          <Pie data={data} dataKey="value" innerRadius={42} outerRadius={60} stroke="none" paddingAngle={1} isAnimationActive={false}>
             {data.map((d) => (
-              <Cell key={d.key} fill={CATEGORY_COLORS[d.key] ?? '#6b7280'} />
+              <Cell key={d.key} fill={d.color ?? CATEGORY_COLORS[d.key] ?? '#6b7280'} />
             ))}
           </Pie>
         </PieChart>
@@ -65,7 +171,7 @@ function Donut({
 
 function Legend({ step }: { step: StepContext }) {
   return (
-    <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+    <div className="grid min-w-[240px] flex-1 grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
       {ORDER.map((k) => {
         const c = step.categories.find((x) => x.key === k);
         if (!c) return null;
@@ -73,7 +179,7 @@ function Legend({ step }: { step: StepContext }) {
           <div key={k} className="min-w-0">
             <div className="flex items-center gap-1.5 text-xs">
               <i className="inline-block h-2 w-2 rounded-sm" style={{ background: CATEGORY_COLORS[k] }} />
-              <span className="truncate">{CATEGORY_LABELS[k]}</span>
+              <span>{CATEGORY_LABELS[k]}</span>
               <span className="ml-auto tabular-nums text-[var(--color-foreground)]">{c.pct}%</span>
             </div>
             <div className="pl-3.5 text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
@@ -189,14 +295,14 @@ function Trend({
             />
             {mode === 'total' ? (
               ORDER.map((k) => (
-                <Bar key={k} dataKey={k} stackId="a" fill={CATEGORY_COLORS[k]}>
+                <Bar key={k} dataKey={k} stackId="a" fill={CATEGORY_COLORS[k]} isAnimationActive={false}>
                   {data.map((d) => (
                     <Cell key={d.step} fillOpacity={selected === null || selected === d.step ? 1 : 0.55} />
                   ))}
                 </Bar>
               ))
             ) : (
-              <Bar dataKey="delta" fill="#8b5cf6" />
+              <Bar dataKey="delta" fill="#8b5cf6" isAnimationActive={false} />
             )}
           </BarChart>
         </ResponsiveContainer>
@@ -309,10 +415,10 @@ export function ContextTab({ id }: { id: string }) {
         </div>
       </Card>
 
-      <div className="grid gap-3 lg:grid-cols-2">
+      <div className="grid gap-3 2xl:grid-cols-2">
         <Card title="Token Stats" right={step !== null && <span className="text-[11px] text-[var(--color-muted-foreground)]">Step {step + 1}</span>}>
           {stepCtx.data ? (
-            <div className="flex items-center gap-5">
+            <div className="flex flex-wrap items-center gap-5">
               <Donut
                 data={stepCtx.data.categories.map((c) => ({ key: c.key, value: Math.max(c.tokens, 0) }))}
                 center={formatTokens(stepCtx.data.actual_input)}
@@ -329,7 +435,7 @@ export function ContextTab({ id }: { id: string }) {
           right={t?.tokens_per_second ? <Badge>{t.tokens_per_second} tok/s</Badge> : undefined}
         >
           {t ? (
-            <div className="flex items-center gap-5">
+            <div className="flex flex-wrap items-center gap-5">
               <Donut
                 data={[
                   { key: 'assistant', value: t.thinking_ms },
@@ -340,7 +446,7 @@ export function ContextTab({ id }: { id: string }) {
                 center={formatMs(t.model_ms + t.tools_ms)}
                 sub="Active time"
               />
-              <div className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 text-xs">
+              <div className="grid min-w-[220px] flex-1 grid-cols-2 gap-x-6 gap-y-3 text-xs">
                 {[
                   ['assistant', 'Thinking', t.thinking_ms],
                   ['user', 'Answer', t.answer_ms],
@@ -352,7 +458,7 @@ export function ContextTab({ id }: { id: string }) {
                       <i className="inline-block h-2 w-2 rounded-sm" style={{ background: CATEGORY_COLORS[String(k)] }} />
                       {label}
                       <span className="ml-auto tabular-nums">
-                        {t.wall_ms ? `${Math.round((Number(ms) / (t.wall_ms || 1)) * 100)}%` : ''}
+                        {Math.round((Number(ms) / (t.thinking_ms + t.answer_ms + t.tools_ms + t.overhead_ms || 1)) * 100)}%
                       </span>
                     </div>
                     <div className="pl-3.5 text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
@@ -370,6 +476,8 @@ export function ContextTab({ id }: { id: string }) {
           </div>
         </Card>
       </div>
+
+      <CostDistribution id={id} />
 
       <Card title="Current Context" right={stepCtx.data && <span className="text-[11px] text-[var(--color-muted-foreground)]">{stepCtx.data.model}</span>}>
         {stepCtx.data ? <ContextBar step={stepCtx.data} /> : <Empty>…</Empty>}

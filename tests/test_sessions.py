@@ -128,6 +128,62 @@ class TestClaudeCode:
         assert t["thinking_ms"] == 1500 and t["tokens_per_second"]
 
 
+class TestCostAndTiming:
+    def test_cost_breakdown_adds_up(self, tmp_path):
+        p = tmp_path / f"{SID}.jsonl"
+        claude_session(p)
+        ps = claude_code.parse(str(p))
+        c = analysis.cost_breakdown(ps)
+        assert c["total_usd"] == pytest.approx(ps.meta.cost_usd, abs=1e-5)
+        assert sum(x["usd"] for x in c["by_type"]) == pytest.approx(c["total_usd"], abs=1e-5)
+        assert sum(x["usd"] for x in c["by_category"]) == pytest.approx(c["total_usd"], abs=1e-4)
+        assert {x["key"] for x in c["by_type"]} >= {"cache_read", "output"}
+        assert any(x["key"] == "output" for x in c["by_category"])
+        assert c["by_model"][0]["model"] == "claude-sonnet-5-5" and len(c["by_turn"]) == 1
+
+    def test_unpriced_models_are_reported_not_guessed(self, tmp_path):
+        T = "t1"
+        rows = [
+            {"type": "turn_context", "payload": {"turn_id": T, "model": "codex-auto-review"}},
+            {"type": "response_item", "timestamp": "2026-10-28T10:00:01Z", "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": "hi"}]}},
+            {"type": "token_usage_record", "timestamp": "2026-10-28T10:00:02Z", "ordinal": 1,
+             "payload": {"turn_id": T, "root_turn_id": T, "response_id": "r", "usage": {"input_tokens": 100, "output_tokens": 5}}},
+        ]
+        p = tmp_path / "rollout-x-abc.jsonl"
+        p.write_text(jl(rows))
+        c = analysis.cost_breakdown(codex.parse(str(p)))
+        assert c["total_usd"] == 0 and c["unpriced_steps"] == 1
+
+    def test_request_pairing_ignores_aborted_requests(self, tmp_path):
+        base = {"cwd": "/w", "sessionId": SID}
+        rows = [
+            {"type": "user", "timestamp": "2026-10-28T10:00:00.000Z", "message": {"role": "user", "content": "go"}, **base},
+            # an aborted request long before the one that actually got an answer
+            {"type": "api-request", "id": "r0", "timestamp": "2026-10-28T10:00:01.000Z", "keep": 0, "tail": []},
+            {"type": "api-request", "id": "r1", "timestamp": "2026-10-28T11:30:00.000Z", "keep": 0, "tail": []},
+            {"type": "assistant", "timestamp": "2026-10-28T11:30:04.000Z",
+             "message": {"id": "m1", "model": "claude-sonnet-5-5", "role": "assistant", "usage": usage(), "content": [{"type": "text", "text": "ok"}]}, **base},
+        ]
+        p = tmp_path / f"{SID}.jsonl"
+        p.write_text(jl(rows))
+        ps = claude_code.parse(str(p))
+        assert ps.steps[0].model_ms == 4000.0
+
+    def test_idle_gaps_do_not_inflate_wall_time(self, tmp_path):
+        base = {"cwd": "/w", "sessionId": SID}
+        rows = [
+            {"type": "user", "timestamp": "2026-10-28T10:00:00.000Z", "message": {"role": "user", "content": "go"}, **base},
+            {"type": "assistant", "timestamp": "2026-10-28T10:00:10.000Z",
+             "message": {"id": "m1", "model": "claude-sonnet-5-5", "role": "assistant", "usage": usage(), "content": [{"type": "tool_use", "id": "t", "name": "Bash", "input": {}}]}, **base},
+            # the laptop slept for two days before the tool result came back
+            {"type": "user", "timestamp": "2026-10-30T10:00:10.000Z",
+             "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "t", "content": "ok"}]}, **base},
+        ]
+        p = tmp_path / f"{SID}.jsonl"
+        p.write_text(jl(rows))
+        assert analysis.timing(claude_code.parse(str(p)))["wall_ms"] <= 10_000 + 5 * 60 * 1000
+
+
 class TestFindings:
     def test_repeated_calls_and_error_streaks(self, tmp_path):
         rows = [{"type": "user", "timestamp": "2026-10-28T10:00:00.000Z", "message": {"role": "user", "content": "go"}}]
@@ -234,6 +290,8 @@ class TestApi:
         traj = (await api.get(f"/api/sessions/{sid}/trajectory")).json()
         assert len(traj["steps"]) == 2 and traj["turns"][0]["turn"] == 1
         assert (await api.get(f"/api/sessions/{sid}/timing")).json()["thinking_ms"] == 1500
+        cost = (await api.get(f"/api/sessions/{sid}/cost")).json()
+        assert cost["total_usd"] > 0 and cost["by_type"]
         md = (await api.get(f"/api/sessions/{sid}/export.md")).text
         assert md.startswith("# Fix parser") and "fix the bug" in md
 

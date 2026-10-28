@@ -11,6 +11,7 @@ and tool schemas are inferred as whatever the conversation doesn't explain.
 from __future__ import annotations
 
 import json
+from bisect import bisect_left
 from typing import Any, Optional
 
 from . import models as M
@@ -181,6 +182,27 @@ class StepContext:
         return out
 
 
+def _event_items(ps: ParsedSession) -> tuple[list[int], list, list[int]]:
+    """Per-event context items (main thread only), computed once per session."""
+    cached = getattr(ps, "_ev_items", None)
+    if cached is not None:
+        return cached
+    idxs: list[int] = []
+    items: list = []
+    resets: list[int] = []  # positions in `items` where a compaction restarts the context
+    for e in ps.events:
+        if e.sidechain:
+            continue
+        it = _event_item(e)
+        if e.kind == M.COMPACTION and e.label in ("summary", "compact_boundary"):
+            resets.append(len(items))
+        if it:
+            idxs.append(e.idx)
+            items.append(it)
+    ps._ev_items = (idxs, items, resets)  # type: ignore[attr-defined]
+    return ps._ev_items  # type: ignore[attr-defined]
+
+
 def _items_for_step(ps: ParsedSession, step: Step, msg_cache: dict[str, list]) -> tuple[list, bool, Optional[list[str]]]:
     """(items, inferred, ref_hashes_or_None) for the request this step sent."""
     sys_items, tool_items = _shape_items(ps, step)
@@ -194,16 +216,15 @@ def _items_for_step(ps: ParsedSession, step: Step, msg_cache: dict[str, list]) -
                 msg_cache[h] = cl
             items.extend(cl)
         return items, not (sys_items or tool_items), step.refs
-    # Rebuild from the conversation so far.
-    items = list(sys_items) + list(tool_items)
-    for e in ps.events[: step.first_event]:
-        if e.sidechain:
-            continue
-        if e.kind == M.COMPACTION and e.label in ("summary", "compact_boundary"):
-            items = list(sys_items) + list(tool_items)
-        it = _event_item(e)
-        if it:
-            items.append(it)
+    # Rebuild from the conversation so far (prefix of the per-event items, from
+    # the last compaction on).
+    idxs, evitems, resets = _event_items(ps)
+    hi = bisect_left(idxs, step.first_event)
+    lo = 0
+    r = bisect_left(resets, hi)  # resets are positions in evitems
+    if r > 0:
+        lo = resets[r - 1]
+    items = list(sys_items) + list(tool_items) + evitems[lo:hi]
     return items, not (sys_items or tool_items), None
 
 
@@ -255,6 +276,9 @@ def step_context(ps: ParsedSession, index: int, detail: bool = False) -> dict[st
 
 def trend(ps: ParsedSession) -> list[dict[str, Any]]:
     """Category totals for every non-synthetic step (for the stacked bar chart)."""
+    done = getattr(ps, "_trend", None)
+    if done is not None:
+        return done
     cache: dict[str, list] = getattr(ps, "_msg_cache", None) or {}
     ps._msg_cache = cache  # type: ignore[attr-defined]
     out = []
@@ -278,6 +302,7 @@ def trend(ps: ParsedSession) -> list[dict[str, Any]]:
         })
         if not st.sidechain:
             prev_total = total
+    ps._trend = out  # type: ignore[attr-defined]
     return out
 
 

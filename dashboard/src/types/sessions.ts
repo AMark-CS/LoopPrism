@@ -166,3 +166,14 @@ export interface Timing {
   wall_ms: number;
   tokens_per_second: number | null;
 }
+
+export interface CostBreakdown {
+  total_usd: number;
+  subagent_usd: number | null;
+  unpriced_steps: number;
+  by_type: { key: string; label: string; usd: number }[];
+  by_category: { key: string; label: string; usd: number }[];
+  by_model: { model: string; usd: number }[];
+  by_turn: { turn: number; usd: number }[];
+  top_steps: { step: number; turn: number; usd: number }[];
+}

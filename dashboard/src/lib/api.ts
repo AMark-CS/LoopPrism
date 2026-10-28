@@ -101,6 +101,7 @@ export const api = {
   getContext: (id: string) => get<S.ContextOverview>(`/api/sessions/${id}/context`),
   getStepContext: (id: string, step: number) =>
     get<S.StepContext>(`/api/sessions/${id}/context/${step}`),
+  getCost: (id: string) => get<S.CostBreakdown>(`/api/sessions/${id}/cost`),
   getTiming: (id: string) => get<S.Timing>(`/api/sessions/${id}/timing`),
   resumeSession: (id: string, terminal: boolean) =>
     post<{ command: string; opened: boolean }>(

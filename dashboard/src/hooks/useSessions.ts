@@ -34,3 +34,6 @@ export const useStepContext = (id: string, step: number | null) =>
 
 export const useTiming = (id: string) =>
   useQuery({ queryKey: ['timing', id], queryFn: () => api.getTiming(id) });
+
+export const useCostBreakdown = (id: string) =>
+  useQuery({ queryKey: ['cost-breakdown', id], queryFn: () => api.getCost(id) });
