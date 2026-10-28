@@ -36,7 +36,7 @@ Then open `http://localhost:8080` and watch every MCP call appear in real time.
 
 - **Waterfall traces** — See every MCP tool call with timing, result size, and error state
 - **MCP-native** — Understands `tools/call`, `tools/list`, `prompts/get`, and more
-- **Cost breakdown** — Know which tool generates the most data
+- **Estimated cost** — Agent runs are priced from their real token usage at the providers' current API prices (an API-equivalent estimate; subscription plans bill differently)
 - **Zero config** — One command, SQLite on disk, no Docker, no cloud
 - **Local-first** — All data stays on your machine
 
@@ -101,7 +101,9 @@ Download the latest `.dmg` from the
 [Releases page](https://github.com/AMark-CS/LoopPrism/releases/latest): `arm64` for Apple
 Silicon, `x64` for Intel. Drag **LoopPrism** into Applications and open it. It bundles the
 proxy and the dashboard (no Python needed), shows the dashboard in a window, and keeps
-running from the menu bar.
+running from the menu bar. On first launch it connects Claude Code and Codex for you (switch
+them off or on later in the **Apps** page), so there is nothing to install or configure; it also
+reuses a `lprism proxy` you already have running instead of starting a second one.
 
 The app is not signed or notarized yet, so macOS blocks the first launch: right-click the
 app and choose **Open**, or run `xattr -dr com.apple.quarantine /Applications/LoopPrism.app`.
