@@ -37,3 +37,6 @@ export const useTiming = (id: string) =>
 
 export const useCostBreakdown = (id: string) =>
   useQuery({ queryKey: ['cost-breakdown', id], queryFn: () => api.getCost(id) });
+
+export const useAgents = (id: string) =>
+  useQuery({ queryKey: ['agents', id], queryFn: () => api.getAgents(id) });

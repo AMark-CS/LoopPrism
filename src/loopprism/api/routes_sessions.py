@@ -16,7 +16,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
-from ..sessions import actions, analysis, context
+from ..sessions import actions, agents, analysis, context
 from ..sessions import models as M
 from ..sessions.store import SessionStore
 
@@ -46,7 +46,11 @@ def get_store(request: Request) -> SessionStore:
 
 async def _load(request: Request, session_id: str):
     store = get_store(request)
-    ps = await asyncio.to_thread(store.load, session_id)
+    if "~" in session_id:  # a subagent transcript: "<session>~<agent>"
+        parent, _, agent_id = session_id.partition("~")
+        ps = await asyncio.to_thread(store.load_subagent, parent, agent_id)
+    else:
+        ps = await asyncio.to_thread(store.load, session_id)
     if ps is None:
         raise HTTPException(status_code=404, detail="Session not found")
     return ps
@@ -76,8 +80,17 @@ async def list_projects(request: Request):
 async def get_session(session_id: str, request: Request):
     ps = await _load(request, session_id)
     meta = ps.meta.to_dict()
-    meta["resume_command"] = actions.resume_command(ps.meta)
+    meta["resume_command"] = None if "~" in session_id else actions.resume_command(ps.meta)
     return {"session": meta, "stats": context.stats(ps), "findings": analysis.findings(ps)}
+
+
+@router.get("/{session_id}/agents")
+async def get_agents(session_id: str, request: Request):
+    """The main agent and the subagents it spawned, with cost, time and handoffs."""
+    if "~" in session_id:
+        raise HTTPException(status_code=400, detail="Open the agent tree from the parent session")
+    ps = await _load(request, session_id)
+    return await asyncio.to_thread(agents.build, ps)
 
 
 @router.get("/{session_id}/events")
@@ -171,6 +184,8 @@ async def export_markdown(session_id: str, request: Request):
 
 @router.post("/{session_id}/resume")
 async def resume(session_id: str, request: Request, terminal: bool = False):
+    if "~" in session_id:
+        raise HTTPException(status_code=400, detail="Subagent transcripts cannot be resumed on their own")
     ps = await _load(request, session_id)
     command = actions.resume_command(ps.meta)
     if terminal:
@@ -183,6 +198,8 @@ async def resume(session_id: str, request: Request, terminal: bool = False):
 
 @router.post("/{session_id}/delete")
 async def delete_session(session_id: str, request: Request):
+    if "~" in session_id:
+        raise HTTPException(status_code=400, detail="Delete the parent session instead")
     store = get_store(request)
     row = await asyncio.to_thread(store.find, session_id)
     if row is None:

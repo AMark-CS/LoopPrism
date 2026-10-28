@@ -54,7 +54,7 @@ export interface SessionStats {
 }
 
 export interface SessionDetail {
-  session: SessionSummary & { resume_command: string };
+  session: SessionSummary & { resume_command: string | null };
   stats: SessionStats;
   findings: Finding[];
 }
@@ -176,4 +176,51 @@ export interface CostBreakdown {
   by_model: { model: string; usd: number }[];
   by_turn: { turn: number; usd: number }[];
   top_steps: { step: number; turn: number; usd: number }[];
+}
+
+export interface AgentText {
+  text: string;
+  tokens: number;
+  estimated: boolean;
+  truncated: boolean;
+}
+
+export interface AgentNode {
+  id: string;
+  parent_id: string | null;
+  name: string;
+  role: string;
+  description: string;
+  background: boolean;
+  status: string;
+  /** Id to open this agent's own transcript ("<session>~<agent>"); null when none was found. */
+  session_id: string | null;
+  start: string | null;
+  end: string | null;
+  spawned_at: string | null;
+  duration_ms: number | null;
+  model: string | null;
+  models: string[];
+  steps: number;
+  tool_calls: number;
+  tools: Record<string, number>;
+  errors: number;
+  cost_usd: number | null;
+  tokens: { input: number; output: number; cache_read: number; cache_write: number; total: number };
+  task: AgentText | null;
+  result: AgentText | null;
+}
+
+export interface AgentTree {
+  supported: boolean;
+  reason: string | null;
+  agents: AgentNode[];
+  totals: {
+    subagents: number;
+    peak_parallel: number;
+    subagent_cost_usd: number | null;
+    main_cost_usd: number | null;
+    total_cost_usd: number | null;
+    passed_tokens: number;
+  };
 }

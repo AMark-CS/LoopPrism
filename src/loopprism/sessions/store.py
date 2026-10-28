@@ -12,7 +12,8 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Optional
 
-from . import claude_code, codex
+from . import agents, claude_code, codex
+from . import models as M
 from .models import ParsedSession, SessionMeta
 
 CACHE_SIZE = 4
@@ -210,6 +211,31 @@ class SessionStore:
                 self._cache.move_to_end(path)
                 return hit[1]
         ps = self._parser(row["agent"]).parse(path)
+        self._remember(path, sig, ps)
+        return ps
+
+    def load_subagent(self, parent_id: str, agent_id: str) -> Optional[ParsedSession]:
+        """A subagent's own transcript, addressed as ``<session>~<agent>``."""
+        if not agents.AGENT_ID.match(agent_id):
+            return None
+        row = self.find(parent_id)
+        if row is None or row["agent"] != "claude-code":
+            return None
+        folder = os.path.realpath(agents.subagent_dir(row["path"]))
+        path = os.path.realpath(agents.subagent_file(row["path"], agent_id))
+        if os.path.dirname(path) != folder or not os.path.isfile(path):
+            return None
+        st = os.stat(path)
+        sig = (st.st_mtime, st.st_size)
+        with self._lock:
+            hit = self._cache.get(path)
+            if hit and hit[0] == sig:
+                self._cache.move_to_end(path)
+                return hit[1]
+        ps = claude_code.parse(path, standalone=True)
+        first = next((e.text for e in ps.events if e.kind == M.USER and e.text.strip()), "")
+        ps.meta.id = f"{parent_id}~{agent_id}"
+        ps.meta.title = ("Subagent: " + (first.strip().splitlines()[0] if first.strip() else agent_id))[:200]
         self._remember(path, sig, ps)
         return ps
 

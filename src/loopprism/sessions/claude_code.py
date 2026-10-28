@@ -93,12 +93,17 @@ def _clip(text: str) -> str:
     return text if len(text) <= M.MAX_EVENT_CHARS else text[: M.MAX_EVENT_CHARS] + f"... [{len(text) - M.MAX_EVENT_CHARS} more chars]"
 
 
-def parse(path: str) -> ParsedSession:
+def parse(path: str, standalone: bool = False) -> ParsedSession:
+    """Parse a transcript. ``standalone`` reads a subagent's own file as a conversation of
+    its own, instead of flagging its rows as a sidechain of another session."""
     stat = os.stat(path)
     rows = list(read_rows(path))
     sid = os.path.splitext(os.path.basename(path))[0]
     meta = SessionMeta(id=sid, agent=AGENT, path=path, size_bytes=stat.st_size)
     ps = ParsedSession(meta=meta)
+
+    def side(row: dict[str, Any]) -> bool:
+        return False if standalone else bool(row.get("isSidechain"))
 
     # ---- pass 1: message pool (so request records can be resolved) ---------
     blobs: dict[str, dict[str, Any]] = {}
@@ -157,7 +162,7 @@ def parse(path: str) -> ParsedSession:
             ts=row.get("timestamp"),
             turn=turn,
             text=_clip(text),
-            sidechain=bool(row.get("isSidechain")),
+            sidechain=side(row),
             **kw,
         )
         ps.events.append(ev)
@@ -203,7 +208,7 @@ def parse(path: str) -> ParsedSession:
                 add(M.SYSTEM_EVENT, r, r.get("content") or json.dumps({k: v for k, v in r.items() if k in ("hookCount", "stopReason", "level")}), label=sub)
         elif t == "user" and isinstance(r.get("message"), dict):
             content = r["message"].get("content")
-            sidechain = bool(r.get("isSidechain"))
+            sidechain = side(r)
             if r.get("isCompactSummary"):
                 add(M.COMPACTION, r, _result_text(content) if not isinstance(content, str) else content, label="summary")
                 continue
@@ -238,9 +243,9 @@ def parse(path: str) -> ParsedSession:
             model = m.get("model") or "unknown"
             step = steps_by_msg.get(mid)
             if step is None:
-                if model != "<synthetic>" and last_model and model != last_model and not r.get("isSidechain"):
+                if model != "<synthetic>" and last_model and model != last_model and not side(r):
                     add(M.MODEL_CHANGE, r, f"model changed: {last_model} → {model}", model=model)
-                if model != "<synthetic>" and not r.get("isSidechain"):
+                if model != "<synthetic>" and not side(r):
                     last_model = model
                     if model not in models_seen:
                         models_seen.append(model)
@@ -250,7 +255,7 @@ def parse(path: str) -> ParsedSession:
                     model=model,
                     ts=ts,
                     msg_id=mid,
-                    sidechain=bool(r.get("isSidechain")),
+                    sidechain=side(r),
                     first_event=len(ps.events),
                 )
                 # The request that produced this response is the latest one logged
@@ -287,7 +292,7 @@ def parse(path: str) -> ParsedSession:
                     text = b.get("text") or ""
                     if text.strip():
                         add(M.ASSISTANT, r, text, step=step.index, model=model)
-                        if search_len < SEARCH_TEXT_CAP and not r.get("isSidechain"):
+                        if search_len < SEARCH_TEXT_CAP and not side(r):
                             search.append(text)
                             search_len += len(text)
                 elif bt == "tool_use":

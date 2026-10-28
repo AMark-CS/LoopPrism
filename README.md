@@ -70,6 +70,15 @@
       An optional proxy records every MCP tool call; hooks record what an agent does as it happens.
     </td>
   </tr>
+  <tr>
+    <td colspan="2" valign="top">
+      <h4>🤖 Agents</h4>
+      A session that spawns subagents gets a flow view: the main agent as a line, each subagent
+      branching off and merging back, with what it was asked, what it returned, its cost, and how
+      much ran in parallel. Open any subagent's own conversation. (Claude Code; Codex agent trees
+      are not read yet.)
+    </td>
+  </tr>
 </table>
 
 Everything stays on your machine: SQLite on disk, no Docker, no cloud, no account.

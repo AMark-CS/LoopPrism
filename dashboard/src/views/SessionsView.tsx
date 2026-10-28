@@ -8,6 +8,7 @@ import { formatUsd, parseUtc } from '../lib/format';
 import { useRoute } from '../lib/route';
 import { Badge, Button, CopyButton, Empty } from '../components/ui';
 import { ChatTab } from './session/ChatTab';
+import { AgentsTab } from './session/AgentsTab';
 import { ContextTab } from './session/ContextTab';
 import { TrajectoryTab } from './session/TrajectoryTab';
 import type { SessionSummary } from '../types/sessions';
@@ -17,6 +18,7 @@ const TABS = [
   { key: 'chat', label: 'Chat' },
   { key: 'trajectory', label: 'Trajectory' },
   { key: 'context', label: 'Context' },
+  { key: 'agents', label: 'Agents' },
 ] as const;
 
 const basename = (p: string | null) => (p ? p.split('/').filter(Boolean).pop() ?? p : 'No project');
@@ -214,7 +216,8 @@ function SessionList({
   );
 }
 
-function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: number | null }) {
+function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; focus: number | null }) {
+  let tab = tabProp;
   const qc = useQueryClient();
   const [, go] = useRoute();
   const { data, isLoading, error } = useSession(id);
@@ -222,6 +225,10 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
   if (isLoading) return <Empty>Loading session…</Empty>;
   if (error || !data) return <Empty>Session not found.</Empty>;
   const { session: s, stats, findings } = data;
+  const isSub = id.includes('~'); // a subagent's own transcript, opened from the Agents tab
+  const parentId = id.split('~')[0];
+  const tabs = TABS.filter((t) => t.key !== 'agents' || (!isSub && s.agent === 'claude-code'));
+  if (isSub && tab === 'agents') tab = 'chat';
 
   async function resume() {
     setMsg('');
@@ -246,6 +253,15 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="space-y-2 border-b border-[var(--color-border)] px-5 py-3">
+        {isSub && (
+          <button
+            type="button"
+            onClick={() => go(`sessions/${parentId}/agents`)}
+            className="text-xs text-[var(--color-primary)] hover:underline"
+          >
+            ← Back to the agent flow
+          </button>
+        )}
         <button
           type="button"
           onClick={() => go('sessions')}
@@ -266,6 +282,7 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
               {s.cost_usd != null && <span>{formatUsd(s.cost_usd)} est.</span>}
             </div>
           </div>
+          {!isSub && (
           <div className="flex shrink-0 items-center gap-2">
             <Button tone="primary" onClick={resume} title="Open a new Terminal window and resume this session">
               <Play className="h-3 w-3" /> Resume
@@ -281,14 +298,17 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
+          )}
         </div>
-        <div className="flex items-center gap-2">
-          <code className="min-w-0 flex-1 truncate rounded-md bg-[var(--color-background)] px-2 py-1 font-mono text-[11px] text-[var(--color-muted-foreground)]">
-            {s.resume_command}
-          </code>
-          <CopyButton text={s.resume_command} />
-          {msg && <span className="text-[11px] text-[var(--color-muted-foreground)]">{msg}</span>}
-        </div>
+        {s.resume_command && (
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-md bg-[var(--color-background)] px-2 py-1 font-mono text-[11px] text-[var(--color-muted-foreground)]">
+              {s.resume_command}
+            </code>
+            <CopyButton text={s.resume_command} />
+            {msg && <span className="text-[11px] text-[var(--color-muted-foreground)]">{msg}</span>}
+          </div>
+        )}
         {findings.filter((f) => f.severity !== 'info').length > 0 && tab === 'chat' && (
           <div className="text-[11px] text-[#fbbf24]">
             {findings.filter((f) => f.severity !== 'info').length} patterns worth a look — see Trajectory.
@@ -296,7 +316,7 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
         )}
       </div>
       <div className="flex gap-6 border-b border-[var(--color-border)] px-5">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -318,6 +338,7 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
         {tab === 'chat' && <ChatTab id={id} />}
         {tab === 'trajectory' && <TrajectoryTab id={id} focus={focus} />}
         {tab === 'context' && <ContextTab id={id} />}
+        {tab === 'agents' && <AgentsTab id={id} />}
       </div>
     </div>
   );

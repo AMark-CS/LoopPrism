@@ -103,6 +103,7 @@ export const api = {
     get<S.StepContext>(`/api/sessions/${id}/context/${step}`),
   getCost: (id: string) => get<S.CostBreakdown>(`/api/sessions/${id}/cost`),
   getTiming: (id: string) => get<S.Timing>(`/api/sessions/${id}/timing`),
+  getAgents: (id: string) => get<S.AgentTree>(`/api/sessions/${id}/agents`),
   resumeSession: (id: string, terminal: boolean) =>
     post<{ command: string; opened: boolean }>(
       `/api/sessions/${id}/resume?terminal=${terminal}`,
