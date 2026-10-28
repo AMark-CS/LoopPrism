@@ -92,7 +92,13 @@ try {
   Step "installs silently for the current user" -Fatal {
     $p = Start-Process $installer.FullName -ArgumentList "/S" -Wait -PassThru
     Assert ($p.ExitCode -eq 0) "installer exit code $($p.ExitCode)"
-    Assert (Test-Path $appExe) "missing $appExe"
+    # The NSIS stub may hand over to another process, so the files can land after it returns.
+    try { Wait-Until { Test-Path $appExe } 120 "$appExe" } catch {
+      $found = Get-ChildItem $env:LOCALAPPDATA, $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter "LoopPrism.exe" -Recurse -Depth 4 -ErrorAction SilentlyContinue |
+        Select-Object -First 5 -ExpandProperty FullName
+      $programs = (Get-ChildItem (Join-Path $env:LOCALAPPDATA "Programs") -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) -join ", "
+      throw "missing $appExe; LoopPrism.exe found at: [$($found -join '; ')]; LOCALAPPDATA\Programs holds: [$programs]"
+    }
     Assert (Test-Path (Join-Path $resources "sidecar\lprism\lprism.exe")) "missing bundled lprism.exe"
     Assert (Test-Path (Join-Path $resources "agent-hooks\plugin\scripts\hook.js")) "missing bundled hooks"
     Assert (Test-Path (Join-Path $resources "agent-hooks\.claude-plugin\marketplace.json")) "missing bundled marketplace"

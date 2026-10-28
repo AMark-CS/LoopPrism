@@ -75,18 +75,40 @@ jobs:
         with:
           node-version: 22
 
+      # Failures are echoed as annotations too (readable without logging in).
       - name: Python tests
         run: |
           python -m pip install --upgrade pip
           python -m pip install ".[dev]"
-          python -m pytest -q
+          python -m pytest -q -rfE --tb=line -p no:cacheprovider 2>&1 | Tee-Object -FilePath pytest.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $tail = (Get-Content pytest.log -Tail 60) -join "%0A"
+            Write-Host "::error title=pytest failed::$tail"
+          }
+          exit $code
 
       - name: Desktop tests
+        if: always()
         working-directory: desktop
         run: |
           npm ci
-          npm test
+          npm test 2>&1 | Tee-Object -FilePath test.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $tail = (Get-Content test.log -Tail 60) -join "%0A"
+            Write-Host "::error title=desktop tests failed::$tail"
+          }
+          exit $code
 
       - name: npm package tests
+        if: always()
         working-directory: npm
-        run: node --test
+        run: |
+          node --test 2>&1 | Tee-Object -FilePath test.log
+          $code = $LASTEXITCODE
+          if ($code -ne 0) {
+            $tail = (Get-Content test.log -Tail 60) -join "%0A"
+            Write-Host "::error title=npm tests failed::$tail"
+          }
+          exit $code
