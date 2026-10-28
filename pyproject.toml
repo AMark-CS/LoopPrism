@@ -1,6 +1,6 @@
 [project]
 name = "loopprism"
-version = "0.1.0"
+version = "0.1.1"
 description = "See what your agents actually do — MCP-native observability and cost attribution"
 readme = "README.md"
 license = {text = "MIT"}

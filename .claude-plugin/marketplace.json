@@ -7,7 +7,7 @@
       "name": "loopprism",
       "source": "./npm/plugin",
       "description": "Record every prompt, tool call and error from Claude Code as runs in LoopPrism.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

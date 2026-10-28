@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from .. import __version__
 from ..trace.collector import TraceCollector
 from ..trace.ingest import AgentIngestor
 from .routes_cost import router as cost_router
@@ -33,7 +34,7 @@ def create_app(
     app = FastAPI(
         title="LoopPrism",
         description="Looking glass for your AI tools — API",
-        version="0.1.0",
+        version=__version__,
     )
 
     # CORS
