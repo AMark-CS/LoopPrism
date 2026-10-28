@@ -297,3 +297,24 @@ def usage_cost(model: str, usage: dict[str, Any]) -> Optional[float]:
         int(usage.get("cache_write_tokens") or 0),
         int(usage.get("cache_write_1h_tokens") or 0),
     )
+
+
+def usage_cost_parts(model: str, usage: dict[str, Any]) -> Optional[dict[str, float]]:
+    """``usage_cost`` split into uncached input, cache reads, cache writes and output."""
+    pricing = lookup(model)
+    if pricing is None:
+        return None
+    if usage.get("long_context") and pricing.long_context is not None:
+        pricing = pricing.long_context
+    n = lambda k: int(usage.get(k) or 0)  # noqa: E731
+    per_m = 1_000_000
+    p_in = pricing.input_cost_per_m
+    read = p_in if pricing.cache_read_cost_per_m is None else pricing.cache_read_cost_per_m
+    write = p_in if pricing.cache_write_cost_per_m is None else pricing.cache_write_cost_per_m
+    write_1h = p_in if pricing.cache_write_1h_cost_per_m is None else pricing.cache_write_1h_cost_per_m
+    return {
+        "input": n("input_tokens") * p_in / per_m,
+        "cache_read": n("cache_read_tokens") * read / per_m,
+        "cache_write": (n("cache_write_tokens") * write + n("cache_write_1h_tokens") * write_1h) / per_m,
+        "output": n("output_tokens") * pricing.output_cost_per_m / per_m,
+    }

@@ -205,3 +205,61 @@ class TestAutomatedPrompts:
         await send(api, ev("prompt", session="c", prompt="please use <b> in the html"))
         names = {t["session_id"]: t["root_span_name"] for t in await runs(collector)}
         assert names == {"a": "(automated message)", "b": "(automated message)", "c": "please use <b> in the html"}
+
+
+class TestRunCostBreakdown:
+    """The Live runs cost panel reads /api/cost/trace/{id}; agent runs must show real usage."""
+
+    @staticmethod
+    async def one_run(api, collector, usage, session="s"):
+        await send(api, ev("prompt", prompt="go", session=session), ev("tool", tool_name="Bash", session=session),
+                   ev("stop", session=session, usage=usage))
+        return [t for t in await runs(collector) if t["session_id"] == session][0]["id"]
+
+    @pytest.mark.asyncio
+    async def test_agent_run_cost_comes_from_real_usage(self, api, collector):
+        usage = [
+            {"model": "claude-sonnet-5-5", "input_tokens": 1_000_000, "output_tokens": 100_000,
+             "cache_read_tokens": 10_000_000, "cache_write_1h_tokens": 500_000, "calls": 12},
+            {"model": "mystery-model", "input_tokens": 5, "calls": 1},
+        ]
+        rid = await self.one_run(api, collector, usage)
+        d = (await api.get(f"/api/cost/trace/{rid}")).json()
+        assert d["total_cost_usd"] == pytest.approx(6.0)
+        a = d["agent_usage"]
+        by_type = {t["key"]: t for t in a["by_token_type"]}
+        assert by_type["input"]["cost_usd"] == pytest.approx(2.0)
+        assert by_type["cache_read"]["cost_usd"] == pytest.approx(1.0)
+        assert by_type["cache_write"]["cost_usd"] == pytest.approx(2.0) and by_type["cache_write"]["tokens"] == 500_000
+        assert by_type["output"]["cost_usd"] == pytest.approx(1.0)
+        # the split adds up to the run's cost
+        assert sum(t["cost_usd"] for t in a["by_token_type"]) == pytest.approx(d["total_cost_usd"])
+        models = {m["model"]: m for m in a["by_model"]}
+        assert models["claude-sonnet-5-5"]["cost_usd"] == pytest.approx(6.0) and models["claude-sonnet-5-5"]["calls"] == 12
+        assert models["mystery-model"]["cost_usd"] is None and a["unpriced_models"] == ["mystery-model"]
+        assert d["note"] is None
+
+    @pytest.mark.asyncio
+    async def test_run_without_usage_explains_why(self, api, collector):
+        await send(api, ev("prompt", prompt="still going", session="live"), ev("tool", tool_name="Bash", session="live"))
+        (run,) = await runs(collector)
+        d = (await api.get(f"/api/cost/trace/{run['id']}")).json()
+        assert d["agent_usage"] is None and d["total_cost_usd"] == 0
+        assert "finishes its turn" in d["note"]
+        await send(api, ev("stop", session="live"))
+        d = (await api.get(f"/api/cost/trace/{run['id']}")).json()
+        assert "no token usage" in d["note"]
+
+    @pytest.mark.asyncio
+    async def test_trend_uses_the_same_cost(self, api, collector):
+        rid = await self.one_run(api, collector, [{"model": "claude-opus-5-5", "output_tokens": 1_000_000}])
+        trends = (await api.get("/api/cost/trend")).json()["trends"]
+        assert [t["total_cost_usd"] for t in trends if t["trace_id"] == rid] == [20.0]
+
+    @pytest.mark.asyncio
+    async def test_mcp_only_runs_keep_the_bytes_estimate(self, api, collector):
+        tid = await collector.create_trace()
+        sid = await collector.start_span(trace_id=tid, span_type="mcp.tool.call", mcp_server_name="m", tool_name="t")
+        await collector.finish_span(sid, latency_ms=1.0, result_size_bytes=20_480)
+        d = (await api.get(f"/api/cost/trace/{tid}")).json()
+        assert d["agent_usage"] is None and d["note"] is None and d["total_cost_usd"] > 0

@@ -1,5 +1,13 @@
 import { DollarSign, Server, TrendingUp, AlertCircle } from 'lucide-react';
 import { useTraceCost } from '../hooks/useTraces';
+import { formatTokens, formatUsd } from '../lib/format';
+
+const TYPE_COLORS: Record<string, string> = {
+  input: '#6366f1',
+  cache_read: '#14b8a6',
+  cache_write: '#f59e0b',
+  output: '#ec4899',
+};
 
 interface CostPanelProps {
   traceId: string;
@@ -18,7 +26,8 @@ export function CostPanel({ traceId }: CostPanelProps) {
 
   if (!data) return null;
 
-  const { total_cost_usd, mcp_tool_cost_usd, by_tool, items } = data;
+  const { total_cost_usd, mcp_tool_cost_usd, by_tool, items, agent_usage: agent } = data;
+  const agentTotal = agent ? agent.by_token_type.reduce((a, t) => a + t.cost_usd, 0) || 1 : 1;
 
   return (
     <div className="flex w-64 flex-col border-l border-[var(--color-border)] overflow-y-auto">
@@ -33,12 +42,52 @@ export function CostPanel({ traceId }: CostPanelProps) {
       {/* Total */}
       <div className="border-b border-[var(--color-border)] p-4">
         <div className="text-2xl font-semibold text-[var(--color-foreground)]">
-          {total_cost_usd > 0 ? `$${total_cost_usd.toFixed(4)}` : '$0'}
+          {total_cost_usd > 0 ? (agent ? formatUsd(total_cost_usd) : `$${total_cost_usd.toFixed(4)}`) : '$0'}
         </div>
         <div className="text-[10px] text-[var(--color-muted-foreground)]">
-          estimated total cost
+          {agent ? `at API prices as of ${agent.pricing_as_of}` : 'estimated total cost'}
         </div>
       </div>
+
+      {/* Agent run: what its token usage cost */}
+      {agent && (
+        <>
+          <div className="border-b border-[var(--color-border)] px-4 py-3">
+            <div className="mb-2 text-[10px] font-medium text-[var(--color-muted-foreground)]">TOKEN TYPE</div>
+            <div className="space-y-2">
+              {agent.by_token_type.map((t) => (
+                <div key={t.key}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs text-[var(--color-foreground)]">{t.label}</span>
+                    <span className="shrink-0 text-[10px] tabular-nums text-[var(--color-muted-foreground)]">
+                      {formatTokens(t.tokens)} · {formatUsd(t.cost_usd)}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1 rounded-full bg-[var(--color-muted)]">
+                    <div
+                      className="h-1 rounded-full"
+                      style={{ width: `${(t.cost_usd / agentTotal) * 100}%`, background: TYPE_COLORS[t.key] ?? '#6b7280' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="border-b border-[var(--color-border)] px-4 py-3">
+            <div className="mb-2 text-[10px] font-medium text-[var(--color-muted-foreground)]">MODEL</div>
+            <div className="space-y-1.5">
+              {agent.by_model.map((m) => (
+                <div key={m.model} className="flex items-center justify-between gap-2" title={`${m.calls} model calls`}>
+                  <span className="truncate text-xs text-[var(--color-foreground)]">{m.model}</span>
+                  <span className="shrink-0 text-[10px] tabular-nums text-[var(--color-muted-foreground)]">
+                    {m.cost_usd === null ? 'no published price' : formatUsd(m.cost_usd)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* MCP Tool cost */}
       {mcp_tool_cost_usd > 0 && (
@@ -116,9 +165,9 @@ export function CostPanel({ traceId }: CostPanelProps) {
         </div>
       )}
 
-      {items.length === 0 && (
+      {items.length === 0 && !agent && (
         <div className="p-4 text-center text-[10px] text-[var(--color-muted-foreground)]">
-          No cost data available
+          {data.note ?? 'No cost data available'}
         </div>
       )}
     </div>

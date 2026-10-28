@@ -83,7 +83,24 @@ export interface CostItem {
   result_bytes: number | null;
 }
 
+export interface AgentUsageCost {
+  by_model: {
+    model: string;
+    calls: number;
+    tokens: { input: number; cache_read: number; cache_write: number; output: number };
+    /** null when the model has no published price. */
+    cost_usd: number | null;
+  }[];
+  by_token_type: { key: string; label: string; tokens: number; cost_usd: number }[];
+  unpriced_models: string[];
+  pricing_as_of: string;
+}
+
 export interface CostBreakdown {
+  /** Real token usage of an agent run (Claude Code / Codex), priced; null for MCP-only runs. */
+  agent_usage?: AgentUsageCost | null;
+  /** Why there is no cost yet, for an agent run without usage. */
+  note?: string | null;
   trace_id: string;
   total_cost_usd: number;
   input_tokens: number;
