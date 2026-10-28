@@ -9,6 +9,8 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const u = require("../src/updater");
 
+// The macOS swap script runs under /bin/sh; there is nothing to run it with on Windows.
+const SH_ONLY = process.platform === "win32" && "macOS install script";
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), "lp-upd-"));
 const sha = (b) => crypto.createHash("sha256").update(b).digest("hex");
 
@@ -170,7 +172,7 @@ function fakeApp(dir, name, version) {
   return app;
 }
 
-test("installer script swaps the app, drops the backup and reopens it", () => {
+test("installer script swaps the app, drops the backup and reopens it", { skip: SH_ONLY }, () => {
   const root = tmp();
   const target = fakeApp(root, "LoopPrism.app", "old");
   const stageDir = path.join(root, ".stage");
@@ -184,7 +186,7 @@ test("installer script swaps the app, drops the backup and reopens it", () => {
   assert.match(r.log, /installed/);
 });
 
-test("installer script puts the old app back if the new one cannot be moved in", () => {
+test("installer script puts the old app back if the new one cannot be moved in", { skip: SH_ONLY }, () => {
   const root = tmp();
   const target = fakeApp(root, "LoopPrism.app", "old");
   const r = runScript({ target, staged: path.join(root, "missing.app"), stageDir: path.join(root, ".stage"), pid: spawnSync("true").pid });
@@ -194,7 +196,7 @@ test("installer script puts the old app back if the new one cannot be moved in",
   assert.match(r.log, /restored the old one/);
 });
 
-test("installer script quotes odd paths safely", () => {
+test("installer script quotes odd paths safely", { skip: SH_ONLY }, () => {
   const root = tmp();
   const target = fakeApp(root, "Loop Prism's $(touch pwned).app", "old");
   const stageDir = path.join(root, ".stage dir");

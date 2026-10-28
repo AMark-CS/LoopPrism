@@ -15,6 +15,8 @@ jobs:
     name: Build installer and smoke test
     runs-on: windows-latest
     timeout-minutes: 45
+    permissions:
+      contents: write # only to publish the UI screenshots to the windows-screenshots branch
     steps:
       - uses: actions/checkout@v4
 
@@ -51,6 +53,27 @@ jobs:
 
       - name: Smoke test the installed app
         run: ./desktop/scripts/smoke-windows.ps1 -WithClaude
+
+      # Artifacts need a login to download; a branch of PNGs can be viewed by anyone.
+      - name: Publish UI screenshots
+        if: always()
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          if ls smoke-logs/screenshots/*.png >/dev/null 2>&1; then
+            mkdir /tmp/shots && cp smoke-logs/screenshots/*.png /tmp/shots/
+            cd /tmp/shots
+            git init -q -b windows-screenshots
+            git config user.name "github-actions"
+            git config user.email "actions@users.noreply.github.com"
+            git add .
+            git commit -qm "Windows UI screenshots for ${GITHUB_SHA}"
+            git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+            git push -f origin windows-screenshots
+          else
+            echo "no screenshots were taken"
+          fi
 
       - name: Keep the smoke test logs
         if: always()

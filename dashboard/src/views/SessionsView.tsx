@@ -21,7 +21,9 @@ const TABS = [
   { key: 'agents', label: 'Agents' },
 ] as const;
 
-const basename = (p: string | null) => (p ? p.split('/').filter(Boolean).pop() ?? p : 'No project');
+const basename = (p: string | null) => (p ? p.split(/[\\/]/).filter(Boolean).pop() ?? p : 'No project');
+// Windows has a Recycle Bin, not a Trash.
+const BIN = /Windows/i.test(navigator.userAgent) ? 'Recycle Bin' : 'Trash';
 const ago = (s: SessionSummary) => {
   const ts = s.ended_at ?? s.started_at;
   return ts ? formatDistanceToNow(parseUtc(ts), { addSuffix: true }) : '';
@@ -72,7 +74,7 @@ function SessionList({
 
   async function deletePicked() {
     if (!picked.size) return;
-    if (!window.confirm(`Move ${picked.size} session${picked.size > 1 ? 's' : ''} to the Trash?`)) return;
+    if (!window.confirm(`Move ${picked.size} session${picked.size > 1 ? 's' : ''} to the ${BIN}?`)) return;
     setError('');
     for (const id of picked) {
       try {
@@ -154,7 +156,7 @@ function SessionList({
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-[var(--color-muted-foreground)]">{picked.size} selected</span>
             <Button tone="danger" disabled={!picked.size} onClick={deletePicked}>
-              <Trash2 className="h-3 w-3" /> Move to Trash
+              <Trash2 className="h-3 w-3" /> Move to {BIN}
             </Button>
           </div>
         )}
@@ -240,7 +242,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
     }
   }
   async function remove() {
-    if (!window.confirm(`Move “${s.title}” to the Trash?`)) return;
+    if (!window.confirm(`Move “${s.title}” to the ${BIN}?`)) return;
     try {
       await api.deleteSession(id);
       qc.invalidateQueries({ queryKey: ['sessions'] });

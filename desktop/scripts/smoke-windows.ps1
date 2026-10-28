@@ -30,7 +30,7 @@ function Step([string]$name, [scriptblock]$body, [switch]$Fatal, [switch]$Soft) 
   try {
     & $body
     $results.Add("PASS  $name")
-    Write-Host "::notice title=smoke PASS::$name"
+
   } catch {
     $msg = "$name -- $($_.Exception.Message)"
     Write-Host "FAILED: $($_.Exception.Message)"
@@ -179,6 +179,35 @@ try {
     }
   }
 
+  Step "UI tour: screenshots of every page (and the real desktop) for comparison with macOS" {
+    Stop-App
+    $shots = Join-Path $repo "smoke-logs\screenshots"
+    New-Item -ItemType Directory -Force $shots | Out-Null
+    $env:LPRISM_TOUR_DIR = $shots
+    $env:LPRISM_TOUR_SESSION = $sessionId
+    $env:LPRISM_TOUR_QUIT = "1"
+    try { $script:app = Start-Process $appExe -PassThru } finally {
+      Remove-Item Env:LPRISM_TOUR_DIR, Env:LPRISM_TOUR_SESSION, Env:LPRISM_TOUR_QUIT -ErrorAction SilentlyContinue
+    }
+    # The window is still on the second page when live.png lands: grab the whole screen then,
+    # so the real title bar and window frame are in the picture.
+    Wait-Until { Test-Path (Join-Path $shots "live.png") } 120 "the tour to reach the Live runs page"
+    try {
+      Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+      $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+      $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+      $g = [System.Drawing.Graphics]::FromImage($bmp)
+      $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+      $bmp.Save((Join-Path $shots "desktop-native.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+      Write-Host "desktop screenshot $($b.Width)x$($b.Height)"
+    } catch { Write-Host "no desktop screenshot: $($_.Exception.Message)" }
+    Wait-Until { Test-Path (Join-Path $shots "narrow.png") } 120 "the tour to finish"
+    Assert (@(Get-ChildItem $shots -Filter *.png).Count -ge 9) "expected at least 9 screenshots"
+    Wait-Until { -not (Get-Process -Name LoopPrism -ErrorAction SilentlyContinue) } 60 "the app to quit after the tour"
+    $script:app = Start-Process $appExe -PassThru
+    Wait-Until { Test-Healthy } 120 "health after the tour"
+  }
+
   Step "a crashed app's orphaned sidecar is cleaned up on the next start" {
     $old = @(Get-Process -Name lprism).Id
     Get-Process -Name LoopPrism | Stop-Process -Force
@@ -210,7 +239,9 @@ try {
       $now = Get-Process -Name LoopPrism -ErrorAction SilentlyContinue
       $now -and (@($now.Id) -notcontains $first.Id) -and (Test-Healthy)
     } 240 "the updated app to start and become healthy"
-    Assert ((Get-Item $appExe).LastWriteTime -gt $before) "the installed exe was not rewritten"
+    # The new process must be the installed app (NSIS keeps file times, so don't compare those).
+    $running = @(Get-Process -Name LoopPrism | Where-Object { $_.Id -ne $first.Id } | Select-Object -ExpandProperty Path)
+    Assert ($running -contains $appExe) "the restarted app is not running from $appExe (got: $($running -join ', '))"
   }
 
   Step "uninstalls cleanly" {
@@ -240,6 +271,8 @@ try {
   Write-Host "`n================ results ================"
   $results | ForEach-Object { Write-Host $_ }
   $results | Out-File (Join-Path $repo "smoke-logs\results.txt")
+  # One annotation for all results: GitHub keeps only 10 notices per step.
+  Write-Host "::notice title=smoke results::$($results -join '%0A')"
   if ($env:GITHUB_STEP_SUMMARY) {
     "### Windows smoke test`n" | Out-File $env:GITHUB_STEP_SUMMARY -Append
     $results | ForEach-Object { "- $_" } | Out-File $env:GITHUB_STEP_SUMMARY -Append

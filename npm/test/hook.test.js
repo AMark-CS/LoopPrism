@@ -76,7 +76,10 @@ function fakeServer(status = 200) {
 }
 
 // each run gets its own tmp dir so the failure back-off file never leaks between tests
-const isolated = (extra = {}) => ({ TMPDIR: require('node:fs').mkdtempSync(path.join(require('node:os').tmpdir(), 'lp-')), ...extra });
+const isolated = (extra = {}) => {
+  const dir = require('node:fs').mkdtempSync(path.join(require('node:os').tmpdir(), 'lp-'));
+  return { TMPDIR: dir, TEMP: dir, TMP: dir, ...extra }; // os.tmpdir() reads TEMP/TMP on Windows
+};
 
 test('posts the event, prints {} and exits 0', async () => {
   const { server, received, url } = await fakeServer();

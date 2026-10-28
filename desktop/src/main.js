@@ -4,6 +4,7 @@ const {
   BrowserWindow,
   Menu,
   Tray,
+  nativeTheme,
   clipboard,
   ipcMain,
   nativeImage,
@@ -253,6 +254,12 @@ function registerIpc() {
 app.on("second-instance", () => showWindow());
 
 app.whenReady().then(async () => {
+  if (process.platform !== "darwin") {
+    // The UI is dark-only: give the OS title bar and scrollbars the dark theme too, and drop the
+    // default File/Edit/View menu bar that Windows and Linux would show above it.
+    nativeTheme.themeSource = "dark";
+    Menu.setApplicationMenu(null);
+  }
   settings = new Settings(path.join(app.getPath("userData"), "settings.json"));
   sidecar = new Sidecar({
     binary: sidecarBinary(),
@@ -284,7 +291,48 @@ app.whenReady().then(async () => {
 
   await sidecar.start();
   refreshHooks().catch(() => {});
+  if (process.env.LPRISM_TOUR_DIR) runTour(process.env.LPRISM_TOUR_DIR).catch((e) => console.error("tour", e));
 });
+
+/**
+ * Test hook (LPRISM_TOUR_DIR): visit every page and save a PNG of each, so the UI can be compared
+ * across platforms. LPRISM_TOUR_SESSION adds the views of one session.
+ */
+async function runTour(dir) {
+  const fs = require("node:fs");
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  fs.mkdirSync(dir, { recursive: true });
+  const shot = async (name) => {
+    const image = await win.webContents.capturePage();
+    fs.writeFileSync(path.join(dir, `${name}.png`), image.toPNG());
+    console.log(`tour: ${name} ${image.getSize().width}x${image.getSize().height}`);
+  };
+  while (status.state !== "running") await wait(250);
+  showWindow();
+  win.setSize(1280, 820);
+  await wait(2500);
+  for (const tab of ["sessions", "live", "apps", "settings"]) {
+    showWindow(tab);
+    await wait(3000);
+    await shot(tab);
+  }
+  const sid = process.env.LPRISM_TOUR_SESSION;
+  if (sid) {
+    showWindow("sessions");
+    for (const view of ["chat", "trajectory", "context", "agents"]) {
+      await win.webContents.executeJavaScript(
+        `document.querySelector("#dash").src = ${JSON.stringify(`${status.dashboardUrl}/#/sessions/${sid}/${view}`)}`,
+      );
+      await wait(3000);
+      await shot(`session-${view}`);
+    }
+  }
+  win.setSize(900, 640); // a narrow window, to see the responsive layout
+  showWindow("sessions");
+  await wait(2000);
+  await shot("narrow");
+  if (process.env.LPRISM_TOUR_QUIT === "1") app.quit();
+}
 
 /** Looks for a newer release a few seconds after launch (at most once a day). */
 function startUpdater() {

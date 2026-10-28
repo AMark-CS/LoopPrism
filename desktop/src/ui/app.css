@@ -10,7 +10,7 @@
   --ok: #3ecf8e;
   --warn: #f0b429;
   --err: #f05d5d;
-  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
