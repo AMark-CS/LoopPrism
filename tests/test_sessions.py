@@ -316,3 +316,55 @@ class TestApi:
     @pytest.mark.asyncio
     async def test_unknown_session(self, api):
         assert (await api.get("/api/sessions/nope")).status_code == 404
+
+
+class TestCodexHistoryPages:
+    """One long Codex session is several rollout files that all carry the same session id."""
+
+    PAGE = "0a1b2c3d-0000-7000-8000-00000000abcd"
+
+    @staticmethod
+    def rollout(path, title):
+        rows = [
+            {"type": "session_meta", "timestamp": "2026-10-28T10:00:00Z", "payload": {"id": "SESSION-1", "cwd": "/work/x"}},
+            {"type": "turn_context", "timestamp": "2026-10-28T10:00:01Z", "payload": {"turn_id": "t", "model": "gpt-5"}},
+            {"type": "response_item", "timestamp": "2026-10-28T10:00:02Z",
+             "payload": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": title}]}},
+        ]
+        path.write_text(jl(rows))
+
+    def test_pages_get_distinct_ids_and_resume_the_session(self, tmp_path):
+        from loopprism.sessions import actions
+
+        base = tmp_path / "rollout-2026-10-28T10-00-00-SESSION-1.jsonl"
+        page = tmp_path / f"rollout-2026-10-28T11-00-00-SESSION-1_{self.PAGE}.jsonl"
+        self.rollout(base, "same title")
+        self.rollout(page, "same title")
+        a, b = codex.parse(str(base)), codex.parse(str(page))
+        assert a.meta.id == "SESSION-1" and b.meta.id == f"SESSION-1_{self.PAGE}"
+        assert actions.resume_command(a.meta) == actions.resume_command(b.meta) == "codex resume SESSION-1"
+
+    def test_listing_has_no_duplicate_ids(self, home):
+        d = home / ".codex" / "sessions" / "2026" / "10" / "28"
+        self.rollout(d / "rollout-2026-10-28T10-00-00-SESSION-1.jsonl", "hello")
+        self.rollout(d / f"rollout-2026-10-28T11-00-00-SESSION-1_{self.PAGE}.jsonl", "hello")
+        store = SessionStore(None)
+        store.refresh(5)
+        ids = [r["id"] for r in store.list(agent="codex")]
+        assert sorted(ids) == sorted(["SESSION-1", f"SESSION-1_{self.PAGE}"])
+        assert len(store.list(agent="claude-code")) == 1  # the filter keeps the agents apart
+        assert store.load(f"SESSION-1_{self.PAGE}").meta.id == f"SESSION-1_{self.PAGE}"
+
+    def test_an_index_from_before_the_change_is_rebuilt(self, home, tmp_path):
+        import sqlite3
+
+        index = str(tmp_path / "index.db")
+        SessionStore(index).refresh(5)
+        db = sqlite3.connect(index)
+        db.execute("UPDATE sessions SET id = 'stale-duplicate'")
+        db.execute("PRAGMA user_version = 1")
+        db.commit()
+        db.close()
+        store = SessionStore(index)
+        store.refresh(5)
+        assert "stale-duplicate" not in [r["id"] for r in store.list()]

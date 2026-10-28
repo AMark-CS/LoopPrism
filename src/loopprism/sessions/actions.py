@@ -19,9 +19,11 @@ SAFE_ID = re.compile(r"^[A-Za-z0-9._-]{6,80}$")
 
 def resume_command(meta: SessionMeta) -> str:
     """The shell command that resumes this session, including the cd."""
-    if not SAFE_ID.match(meta.id):
+    # A Codex history page is listed as "<session>_<thread>"; resuming takes the session.
+    rid = meta.id if meta.agent == "claude-code" else meta.id.split("_", 1)[0]
+    if not SAFE_ID.match(rid):
         raise ValueError("unexpected session id")
-    cmd = f"claude --resume {meta.id}" if meta.agent == "claude-code" else f"codex resume {meta.id}"
+    cmd = f"claude --resume {rid}" if meta.agent == "claude-code" else f"codex resume {rid}"
     if meta.project and os.path.isdir(meta.project):
         return f"cd {shlex.quote(meta.project)} && {cmd}"
     return cmd

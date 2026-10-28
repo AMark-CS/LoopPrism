@@ -17,6 +17,7 @@ from . import models as M
 from .models import ParsedSession, SessionMeta
 
 CACHE_SIZE = 4
+INDEX_VERSION = 2  # bump when what gets indexed changes; the index is rebuilt
 
 
 def claude_root() -> str:
@@ -58,6 +59,10 @@ class SessionStore:
                 CREATE INDEX IF NOT EXISTS idx_sessions_started ON sessions(started_at);
                 """
             )
+            # Rows indexed before ids were made unique per file are rebuilt.
+            if self._db.execute("PRAGMA user_version").fetchone()[0] < INDEX_VERSION:
+                self._db.execute("DELETE FROM sessions")
+                self._db.execute(f"PRAGMA user_version = {INDEX_VERSION}")
             try:
                 self._db.execute("CREATE VIRTUAL TABLE IF NOT EXISTS fts USING fts5(path UNINDEXED, title, body)")
             except sqlite3.OperationalError:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import os
 from typing import Any, Optional
 
@@ -41,6 +42,10 @@ def parse(path: str) -> ParsedSession:
     rows = list(read_rows(path))
     base = os.path.splitext(os.path.basename(path))[0]
     sid = base.split("rollout-", 1)[-1]
+    # A long Codex session is stored in several rollout files, one per history page
+    # (rollout-<time>-<session>_<thread>.jsonl), and every page carries the same session
+    # id. Keep the pages apart, otherwise the list shows duplicates under one id.
+    page = re.search(r"_([0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12})$", base)
     meta = SessionMeta(id=sid, agent=AGENT, path=path, size_bytes=stat.st_size, fidelity="exact")
     ps = ParsedSession(meta=meta)
 
@@ -76,6 +81,8 @@ def parse(path: str) -> ParsedSession:
         if t == "session_meta":
             meta.project = p.get("cwd") or meta.project
             meta.id = p.get("id") or meta.id
+            if page and "_" not in meta.id:
+                meta.id = f"{meta.id}_{page.group(1)}"
             meta.version = p.get("cli_version") or meta.version
             meta.started_at = p.get("timestamp") or meta.started_at
         elif t == "turn_context":
