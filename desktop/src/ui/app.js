@@ -262,10 +262,59 @@ $("#reveal").onclick = () => lp.revealData();
 $("#logs").onclick = () => lp.showLogs();
 $("#browser").onclick = () => state.status.dashboardUrl && lp.openExternal(state.status.dashboardUrl);
 
+/* ---------- updates ---------- */
+// The button only exists while a newer version is available (or being installed).
+function applyUpdate(u) {
+  const box = $("#update-box");
+  const busy = u.phase === "downloading" || u.phase === "installing";
+  const show = ["available", "downloading", "installing", "downloaded", "error"].includes(u.phase) && u.latest;
+  box.hidden = !show;
+  const btn = $("#update-btn");
+  const sub = $("#update-sub");
+  const bar = $("#update-bar");
+  btn.disabled = busy;
+  bar.hidden = u.phase !== "downloading";
+  $("#update-fill").style.width = `${u.percent ?? 0}%`;
+  sub.className = `update-sub${u.phase === "error" ? " bad" : ""}`;
+  const label = {
+    available: `Update to ${u.latest}`,
+    downloading: `Downloading… ${u.percent ?? 0}%`,
+    installing: "Installing…",
+    downloaded: "Open installer",
+    error: "Try again",
+  }[u.phase];
+  if (label) $("#update-label").textContent = label;
+  sub.textContent =
+    u.phase === "error"
+      ? u.error
+      : u.phase === "downloaded"
+        ? "Drag LoopPrism into Applications to finish."
+        : u.phase === "installing"
+          ? "LoopPrism will restart."
+          : `You have ${u.current}.`;
+  const msg = $("#update-msg");
+  if (u.checked) {
+    msg.className = `msg${u.error && u.phase !== "error" ? " bad" : ""}`;
+    msg.textContent = u.error && u.phase !== "error"
+      ? u.error
+      : u.phase === "idle"
+        ? `You're on the latest version (${u.current}).`
+        : `Version ${u.latest} is available.`;
+  }
+}
+lp.onUpdate(applyUpdate);
+$("#update-btn").onclick = () => lp.installUpdate();
+$("#check-update").onclick = async () => {
+  $("#update-msg").className = "msg";
+  $("#update-msg").textContent = "Checking…";
+  applyUpdate(await lp.checkUpdate());
+};
+
 /* ---------- boot ---------- */
 (async () => {
   state = await lp.state();
   applyStatus(state.status);
+  applyUpdate(await lp.updateState());
   await refreshAgents();
   if (!state.settings.onboarded) await autoSetup();
 })();

@@ -96,3 +96,13 @@ button.ghost:hover { border-color: #3a3a4d; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #2b2b3a; border: 1px solid var(--line); padding: 8px 14px; border-radius: 10px; z-index: 20; }
 
 .note button { margin-left: 8px; padding: 3px 10px; }
+
+.update-box { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; padding: 12px 8px 0; border-top: 1px solid var(--line); }
+.update-btn { width: 100%; border: 0; border-radius: 8px; padding: 8px 10px; background: var(--accent); color: #fff; font-weight: 500; cursor: pointer; text-align: center; }
+.update-btn:hover { background: #8d7ff5; }
+.update-btn:disabled { background: var(--panel2); color: var(--muted); cursor: default; }
+.update-bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.update-bar i { display: block; height: 100%; width: 0; background: var(--accent2); transition: width 0.2s; }
+.update-sub { font-size: 11px; color: var(--muted); }
+.update-sub.bad { color: var(--err); }
+.update-sub a { color: var(--accent2); cursor: pointer; }

@@ -9,6 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
+    "test": "node --test",
     "sidecar": "./scripts/build-sidecar.sh",
     "pack": "npm run sidecar && electron-builder --config electron-builder.config.js --dir",
     "dist": "npm run sidecar && electron-builder --config electron-builder.config.js"

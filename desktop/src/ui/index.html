@@ -27,6 +27,11 @@
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Settings
         </button>
       </nav>
+      <div id="update-box" class="update-box" hidden>
+        <button id="update-btn" class="update-btn" type="button"><span id="update-label">Update</span></button>
+        <div class="update-bar" id="update-bar" hidden><i id="update-fill"></i></div>
+        <div class="update-sub" id="update-sub"></div>
+      </div>
       <div class="proxy-box">
         <div class="proxy-state"><span id="dot" class="dot starting"></span><span id="state-text">Starting…</span></div>
         <button id="copy-proxy" class="link" disabled>Copy proxy URL</button>
@@ -83,7 +88,11 @@
           <p class="hint">Runs are stored in <code id="db-path"></code>. This is the same database the <code>lprism</code> command uses.</p>
           <div class="btns"><button id="reveal" class="ghost">Show in Finder</button><button id="logs" class="ghost">Open proxy log</button><button id="browser" class="ghost">Open dashboard in browser</button></div>
         </div>
-        <p class="hint" id="version"></p>
+        <div class="card form">
+          <h3>Updates</h3>
+          <p class="hint" id="version"></p>
+          <div class="btns"><button id="check-update" class="ghost">Check for updates</button><span id="update-msg" class="msg"></span></div>
+        </div>
       </section>
     </main>
     <div id="toast" class="toast" hidden></div>

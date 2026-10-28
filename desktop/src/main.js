@@ -7,9 +7,11 @@ const {
   clipboard,
   ipcMain,
   nativeImage,
+  net,
   shell,
 } = require("electron");
 const agents = require("./agents");
+const { Updater } = require("./updater");
 const { Settings } = require("./settings");
 const { Sidecar } = require("./sidecar");
 
@@ -32,6 +34,7 @@ if (!app.requestSingleInstanceLock()) {
 
 let settings;
 let sidecar;
+let updater;
 let tray;
 let win = null;
 let status = { state: "starting", proxyUrl: null, dashboardUrl: null };
@@ -226,6 +229,10 @@ function registerIpc() {
     return { settings: values };
   });
 
+  handle("update:state", () => updater.state);
+  handle("update:check", () => updater.check({ manual: true }));
+  handle("update:install", () => updater.install());
+
   handle("proxy:restart", () => sidecar.restart());
   handle("copy", (text) => clipboard.writeText(String(text)));
   handle("open-external", (url) => {
@@ -253,6 +260,7 @@ app.whenReady().then(async () => {
 
   tray = new Tray(trayIcon());
   updateTray();
+  startUpdater();
 
   // Safety nets so the sidecar never outlives us.
   process.on("exit", () => sidecar.killNow());
@@ -267,6 +275,30 @@ app.whenReady().then(async () => {
   await sidecar.start();
   refreshHooks().catch(() => {});
 });
+
+/** Looks for a newer release a few seconds after launch, then every few hours. */
+function startUpdater() {
+  // The installed bundle: <name>.app/Contents/MacOS/<binary>
+  const bundle = app.isPackaged ? path.resolve(process.execPath, "..", "..", "..") : null;
+  const override = process.env.LPRISM_UPDATE_API; // tests / development: a fake release feed
+  updater = new Updater({
+    current: app.getVersion(),
+    arch: process.arch,
+    platform: process.platform,
+    bundle,
+    tmpDir: app.getPath("temp"),
+    downloadsDir: app.getPath("downloads"),
+    pid: process.pid,
+    fetchImpl: (url, opts) => net.fetch(url, opts),
+    openPath: (p) => shell.openPath(p),
+    openExternal: (u) => shell.openExternal(u),
+    quit: () => app.quit(),
+    ...(override ? { apiUrl: override, trusted: (u) => u.startsWith(new URL(override).origin) } : {}),
+  });
+  updater.on("state", (s) => win?.webContents.send("update", s));
+  setTimeout(() => updater.check(), 8000);
+  setInterval(() => updater.check(), 6 * 60 * 60 * 1000);
+}
 
 /**
  * An app update can ship newer hook scripts than the copies installed in

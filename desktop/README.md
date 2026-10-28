@@ -45,6 +45,26 @@ menu bar.
   `lprism` CLI, so the app and CLI share data. (`LOOPPRISM_DB_PATH` overrides it.)
 - Sidecar logs: `~/Library/Logs/LoopPrism/sidecar.log` (**Show logs** in the menu).
 
+## Updates
+
+The app checks this repository's GitHub releases a few seconds after launch and then every six
+hours. When a newer `desktop-v*` release exists, an **Update to x.y.z** button appears in the
+sidebar above the proxy status; when you are on the latest version there is no button.
+**Settings → Updates → Check for updates** checks on demand.
+
+Clicking the button downloads the installer for this Mac's architecture, checks its size and
+SHA-256 against the release, copies the new app out of it, then quits, swaps the app in place
+and reopens it. If the app is not in a folder it can write to (for example it was installed by
+an administrator), the installer is saved to Downloads and opened so you can drag it into
+Applications yourself. Downloads only ever come from this repository's release assets.
+
+Updates are found by comparing the app's version (`desktop/package.json`) with the newest tag,
+so bump `version` before tagging a release. Versions older than 0.2.1 have no updater; install
+the first release that includes it by hand.
+
+For development, `LPRISM_UPDATE_API=http://127.0.0.1:PORT/releases` points the check at a fake
+release feed (same JSON shape as the GitHub releases API). `npm test` runs the updater tests.
+
 ## Building locally
 
 Requires Node 20+, Python 3.10+ and a built dashboard (`src/loopprism/dashboard/dist`
