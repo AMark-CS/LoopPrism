@@ -28,6 +28,12 @@ const EVENTS = {
   SessionEnd: 'session_end',
 };
 
+// Claude Code feeds some automatic messages back as prompts (system reminders,
+// background task notifications). They are not something the user typed, so
+// their text is not sent.
+const AUTOMATED_PROMPT = /^\s*<(system-reminder|task-notification|[a-z-]+-event)\b/;
+const AUTOMATED_LABEL = '(automated message)';
+
 const TIMEOUT_MS = 1000;
 const BACKOFF_MS = 10_000;
 const MAX_STRING = 4000;
@@ -60,7 +66,10 @@ function buildEvent(input, agent, env = process.env) {
     cwd: input.cwd,
     model: input.model,
   };
-  if (kind === 'prompt' && !env.LOOPPRISM_NO_PROMPTS) event.prompt = clip(input.prompt);
+  if (kind === 'prompt' && !env.LOOPPRISM_NO_PROMPTS) {
+    const prompt = typeof input.prompt === 'string' ? input.prompt : '';
+    event.prompt = AUTOMATED_PROMPT.test(prompt) ? AUTOMATED_LABEL : clip(prompt);
+  }
   if (kind === 'tool' || kind === 'tool_failure') {
     event.tool_name = input.tool_name;
     event.tool_input = clip(input.tool_input);
@@ -133,6 +142,6 @@ async function main(argv = process.argv, env = process.env) {
   }
 }
 
-module.exports = { EVENTS, buildEvent, clip, send };
+module.exports = { EVENTS, AUTOMATED_LABEL, buildEvent, clip, send };
 
 if (require.main === module) main().then(() => process.exit(0));

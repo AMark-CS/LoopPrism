@@ -113,3 +113,17 @@ test('survives a server error, garbage input, and being disabled', async () => {
   server.close();
   assert.equal(received.length, 1); // only the first request reached the server
 });
+
+test('injected notifications are not sent as if the user typed them', () => {
+  const { AUTOMATED_LABEL } = require('../plugin/scripts/hook');
+  for (const prompt of [
+    '<system-reminder>\nThe session finished.</system-reminder>',
+    '  <task-notification><task-id>x</task-id></task-notification>',
+    '<side-sessions-event>None are working</side-sessions-event>',
+  ]) {
+    const e = buildEvent({ session_id: 's', hook_event_name: 'UserPromptSubmit', prompt }, 'claude-code', {});
+    assert.equal(e.prompt, AUTOMATED_LABEL);
+  }
+  const real = buildEvent({ session_id: 's', hook_event_name: 'UserPromptSubmit', prompt: 'use <b> tags in the html' }, 'x', {});
+  assert.equal(real.prompt, 'use <b> tags in the html');
+});

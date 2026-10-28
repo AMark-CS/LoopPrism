@@ -1,6 +1,6 @@
 {
   "name": "loopprism",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Install the LoopPrism hooks for Claude Code and Codex, and check what your agents did.",
   "license": "MIT",
   "author": "Mark Zhang",

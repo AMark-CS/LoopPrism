@@ -195,3 +195,13 @@ class TestUsageCost:
         assert s["estimated_cost_usd"] == 20.0
         assert (s["run_count"], s["priced_runs"], s["tool_call_count"]) == (2, 1, 1)
         assert s["pricing_as_of"]
+
+
+class TestAutomatedPrompts:
+    @pytest.mark.asyncio
+    async def test_injected_messages_get_a_neutral_name(self, api, collector):
+        await send(api, ev("prompt", session="a", prompt="<system-reminder>secret stuff</system-reminder>"))
+        await send(api, ev("prompt", session="b", prompt="<task-notification><id>1</id></task-notification>"))
+        await send(api, ev("prompt", session="c", prompt="please use <b> in the html"))
+        names = {t["session_id"]: t["root_span_name"] for t in await runs(collector)}
+        assert names == {"a": "(automated message)", "b": "(automated message)", "c": "please use <b> in the html"}

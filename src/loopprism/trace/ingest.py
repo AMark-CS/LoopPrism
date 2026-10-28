@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
@@ -28,6 +29,10 @@ AGENT_TOOL_CALL = "agent.tool.call"
 PROMPT_PREVIEW_CHARS = 80
 MAX_STRING_CHARS = 2000
 MAX_DEPTH = 6
+
+# Messages Claude Code injects as prompts; not something the user typed.
+AUTOMATED_PROMPT = re.compile(r"^\s*<(system-reminder|task-notification|[a-z-]+-event)\b")
+AUTOMATED_LABEL = "(automated message)"
 
 
 def truncate(value: Any, limit: int = MAX_STRING_CHARS, depth: int = 0) -> Any:
@@ -104,6 +109,8 @@ class AgentIngestor:
             await self.collector.finalize_trace(previous)
             await self.collector.close_run(previous, "abandoned")
         prompt = (event.get("prompt") or "").strip().replace("\n", " ")
+        if AUTOMATED_PROMPT.match(prompt):
+            prompt = AUTOMATED_LABEL
         name = prompt[:PROMPT_PREVIEW_CHARS] or "(prompt)"
         run_id = await self._new_run(event, name)
         return {"run_id": run_id, "abandoned": previous}
