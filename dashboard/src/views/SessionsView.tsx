@@ -85,7 +85,12 @@ function SessionList({
   }
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col border-r border-[var(--color-border)]">
+    <aside
+      className={`${
+        // Narrow window: show either the list or the open session, never both squeezed side by side.
+        activeId ? 'hidden md:flex' : 'flex w-full'
+      } shrink-0 flex-col border-r border-[var(--color-border)] md:w-80`}
+    >
       <div className="space-y-2 border-b border-[var(--color-border)] p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold">
@@ -241,7 +246,14 @@ function SessionPane({ id, tab, focus }: { id: string; tab: string; focus: numbe
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="space-y-2 border-b border-[var(--color-border)] px-5 py-3">
-        <div className="flex items-start justify-between gap-4">
+        <button
+          type="button"
+          onClick={() => go('sessions')}
+          className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] md:hidden"
+        >
+          ← All sessions
+        </button>
+        <div className="flex flex-wrap items-start justify-between gap-2 md:gap-4">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold">{s.title}</h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--color-muted-foreground)]">
@@ -322,7 +334,9 @@ export function SessionsView() {
       {id ? (
         <SessionPane key={id} id={id} tab={tab} focus={focus} />
       ) : (
-        <Empty>Pick a session to inspect its chat, trajectory and context.</Empty>
+        <div className="hidden min-w-0 flex-1 md:flex">
+          <Empty>Pick a session to inspect its chat, trajectory and context.</Empty>
+        </div>
       )}
     </div>
   );

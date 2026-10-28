@@ -151,10 +151,13 @@ function Donut({
   sub: string;
 }) {
   return (
-    <div className="relative h-32 w-32 shrink-0">
-      <ResponsiveContainer>
+    // Sized by width, never wider than the card (a fixed 128px ring was cut off
+    // in the narrow side panel), and radii are percentages so the ring always
+    // fits its box.
+    <div className="relative mx-auto aspect-square w-32 max-w-full shrink-0 sm:mx-0">
+      <ResponsiveContainer width="100%" aspect={1}>
         <PieChart>
-          <Pie data={data} dataKey="value" innerRadius={42} outerRadius={60} stroke="none" paddingAngle={1} isAnimationActive={false}>
+          <Pie data={data} dataKey="value" innerRadius="66%" outerRadius="96%" stroke="none" paddingAngle={1} isAnimationActive={false}>
             {data.map((d) => (
               <Cell key={d.key} fill={d.color ?? CATEGORY_COLORS[d.key] ?? '#6b7280'} />
             ))}
