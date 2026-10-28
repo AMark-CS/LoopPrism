@@ -17,7 +17,7 @@ Six hooks run a small Node script (`scripts/hook.js`, no dependencies):
 | `SessionStart`, `SessionEnd` | that a session started or ended |
 | `UserPromptSubmit` | the text of your prompt |
 | `PostToolUse`, `PostToolUseFailure` | the tool name, its input, a result or error, and how long it took |
-| `Stop` | that Claude finished responding |
+| `Stop` | that Claude finished responding, plus the token counts and model names for that turn (see below) |
 
 Two slash commands are included. `/loopprism:status` prints your newest runs and
 `/loopprism:open` opens the dashboard. They run `scripts/viewer.js`, which only reads from
@@ -30,13 +30,19 @@ machine, the LoopPrism server. Nothing is sent anywhere else unless **you** poin
 at another address by setting `LOOPPRISM_URL` or by running `lpa install --url <address>`.
 
 An event contains the session id, the working directory, the model name when Claude Code provides it, and, depending on
-the hook, your prompt, or a tool's name, input and result. Long values are cut before they are
+the hook, your prompt, or a tool's name, input and result. When Claude finishes a turn, the `Stop` hook opens **your session's own transcript file**
+(the `transcript_path` Claude Code hands to hooks, under `~/.claude/projects/`) and reads only
+the token usage numbers and model names from it, so LoopPrism can estimate what the turn cost.
+The transcript's text is not sent. For Codex sessions the same hook reads the matching file
+under `~/.codex/sessions/`.
+
+Long values are cut before they are
 sent (4,000 characters per string), and LoopPrism cuts them again when it stores them. Events
 are stored in a SQLite file on your machine, `~/.loopprism/traces.db`.
 
-The plugin reads only its own `LOOPPRISM_*` settings from the environment, never reads
-credentials, never makes any other network request, and never changes Claude Code's
-permission settings.
+The plugin reads only its own `LOOPPRISM_*` settings (and `CODEX_HOME`, to find Codex
+sessions) from the environment, never reads credentials, never makes any other network
+request, and never changes Claude Code's permission settings.
 
 ## Controls
 
