@@ -30,9 +30,12 @@ function Step([string]$name, [scriptblock]$body, [switch]$Fatal, [switch]$Soft) 
   try {
     & $body
     $results.Add("PASS  $name")
+    Write-Host "::notice title=smoke PASS::$name"
   } catch {
     $msg = "$name -- $($_.Exception.Message)"
     Write-Host "FAILED: $($_.Exception.Message)"
+    $flat = ($_.Exception.Message -replace "`r?`n", " | ")
+    Write-Host "::error title=smoke FAIL::$name -- $flat"
     if ($Soft) { $results.Add("WARN  $msg") }
     else { $results.Add("FAIL  $msg"); $script:failed = $true }
     if ($Fatal) { throw "fatal step failed: $name" }
@@ -218,7 +221,12 @@ try {
   if ($feed) { Stop-Process -Id $feed.Id -Force -ErrorAction SilentlyContinue }
   Write-Host "`n================ sidecar.log (tail) ================"
   $log = Join-Path $logDir "sidecar.log"
-  if (Test-Path $log) { Get-Content $log -Tail 60 | Out-Host } else { Write-Host "(none)" }
+  if (Test-Path $log) {
+    Get-Content $log -Tail 60 | Out-Host
+    # Annotations are readable without logging in, so surface the end of the log there too.
+    $tail = (Get-Content $log -Tail 25) -join "%0A"
+    Write-Host "::warning title=sidecar.log (tail)::$tail"
+  } else { Write-Host "(none)" }
   New-Item -ItemType Directory -Force (Join-Path $repo "smoke-logs") | Out-Null
   if (Test-Path $log) { Copy-Item $log (Join-Path $repo "smoke-logs\sidecar.log") -Force }
   Get-ChildItem (Join-Path $env:TEMP "loopprism-update*") -ErrorAction SilentlyContinue |
