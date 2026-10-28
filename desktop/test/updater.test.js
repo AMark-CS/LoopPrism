@@ -17,14 +17,23 @@ const release = (version, extra = {}) => ({
   html_url: `https://github.com/${u.REPO}/releases/tag/desktop-v${version}`,
   draft: false,
   prerelease: false,
-  assets: ["arm64", "x64"].flatMap((arch) =>
-    ["dmg", "zip"].map((ext) => ({
-      name: `LoopPrism-${version}-${arch}.${ext}`,
-      browser_download_url: `https://github.com/${u.REPO}/releases/download/desktop-v${version}/LoopPrism-${version}-${arch}.${ext}`,
+  assets: [
+    ...["arm64", "x64"].flatMap((arch) =>
+      ["dmg", "zip"].map((ext) => ({
+        name: `LoopPrism-${version}-${arch}.${ext}`,
+        browser_download_url: `https://github.com/${u.REPO}/releases/download/desktop-v${version}/LoopPrism-${version}-${arch}.${ext}`,
+        size: 1000,
+        digest: `sha256:${"a".repeat(64)}`,
+      })),
+    ),
+    // Windows: the installer (and the blockmap electron-builder may leave beside it, which must not match)
+    ...[`LoopPrism-${version}-x64.exe.blockmap`, `LoopPrism-${version}-x64.exe`].map((name) => ({
+      name,
+      browser_download_url: `https://github.com/${u.REPO}/releases/download/desktop-v${version}/${name}`,
       size: 1000,
-      digest: `sha256:${"a".repeat(64)}`,
+      digest: `sha256:${"b".repeat(64)}`,
     })),
-  ),
+  ],
   ...extra,
 });
 
@@ -60,7 +69,10 @@ test("pickAsset matches the architecture and reads the checksum", () => {
   assert.equal(u.pickAsset(r, "x64").name, "LoopPrism-0.2.1-x64.dmg");
   assert.equal(u.pickAsset(r, "arm64").sha256, "a".repeat(64));
   assert.equal(u.pickAsset(r, "ia32"), null);
-  assert.equal(u.pickAsset(r, "arm64", "win32"), null);
+  assert.equal(u.pickAsset(r, "arm64", "win32"), null); // no Windows on ARM build
+  assert.equal(u.pickAsset(r, "x64", "win32").name, "LoopPrism-0.2.1-x64.exe");
+  assert.equal(u.pickAsset(r, "x64", "win32").sha256, "b".repeat(64));
+  assert.equal(u.pickAsset(r, "x64", "linux"), null);
   const noDigest = release("0.2.1");
   delete noDigest.assets[0].digest;
   assert.equal(u.pickAsset(noDigest, "arm64").sha256, null);
@@ -215,7 +227,9 @@ async function updaterWith(over = {}) {
   const { server, url } = await serve(body);
   const root = tmp();
   const rel = release("0.2.1");
-  rel.assets[0] = { ...rel.assets[0], browser_download_url: url, size: body.length, digest: `sha256:${sha(body)}` };
+  const want = u.pickAsset(rel, over.arch ?? "arm64", over.platform ?? "darwin");
+  const at = rel.assets.findIndex((a) => a.name === want?.name);
+  if (at >= 0) rel.assets[at] = { ...rel.assets[at], browser_download_url: url, size: body.length, digest: `sha256:${sha(body)}` };
   const calls = { opened: [], external: [], spawned: [], quit: 0 };
   const up = new u.Updater({
     current: "0.2.0", arch: "arm64", platform: "darwin", bundle: null,
@@ -283,6 +297,37 @@ test("update available and writable install: stages, writes the swap script, spa
   // the new app is staged next to the old one, which is untouched until the script runs
   assert.equal(fs.readFileSync(path.join(bundle, "Contents", "version"), "utf8"), "old");
   assert.ok(fs.existsSync(path.join(root, ".LoopPrism-update-0.2.1", "LoopPrism.app")));
+  close();
+});
+
+test("Windows: an installed app runs the silent installer once it has quit, and nothing is staged", async () => {
+  const root = tmp();
+  const exe = path.join(root, "LoopPrism.exe");
+  fs.writeFileSync(exe, "old");
+  const { up, calls, close } = await updaterWith({ platform: "win32", arch: "x64", bundle: exe });
+  await up.check();
+  assert.deepEqual([up.state.phase, up.state.auto], ["available", true]);
+  await up.install();
+  assert.equal(calls.quit, 1);
+  assert.equal(calls.spawned.length, 1);
+  const [cmd, args] = calls.spawned[0];
+  assert.equal(path.basename(cmd), "LoopPrism-0.2.1-x64.exe");
+  assert.equal(path.dirname(cmd), up.o.tmpDir);
+  assert.ok(fs.existsSync(cmd)); // the installer is still there for the spawned process
+  assert.deepEqual(args, u.windowsInstallerArgs());
+  assert.deepEqual(args, ["/S", "--updated", "--force-run"]);
+  assert.equal(fs.readFileSync(exe, "utf8"), "old"); // the installer replaces it, not us
+  close();
+});
+
+test("Windows: a copy that is not installed (dev run) saves the installer and opens it", async () => {
+  const { up, calls, close } = await updaterWith({ platform: "win32", arch: "x64", bundle: null });
+  await up.check();
+  assert.equal(up.state.auto, false);
+  await up.install();
+  assert.equal(up.state.phase, "downloaded");
+  assert.equal(path.dirname(calls.opened[0]), up.o.downloadsDir);
+  assert.deepEqual([calls.spawned.length, calls.quit], [0, 0]);
   close();
 });
 

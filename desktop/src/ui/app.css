@@ -18,6 +18,9 @@
 body { margin: 0; height: 100vh; display: flex; background: var(--bg); color: var(--text); overflow: hidden; }
 button, input { font: inherit; color: inherit; }
 .drag { -webkit-app-region: drag; height: 40px; }
+/* Only macOS hides the title bar (traffic lights sit over the sidebar); elsewhere the OS frame stays. */
+body:not(.os-darwin) .drag { display: none; }
+body:not(.os-darwin) .brand { padding-top: 16px; }
 
 .sidebar { width: 196px; flex: none; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 0 12px 14px; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; padding: 4px 8px 16px; }

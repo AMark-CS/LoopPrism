@@ -1,0 +1,92 @@
+name: Windows smoke test
+
+# Builds the Windows installer and exercises the installed app end to end on a real
+# Windows runner (see desktop/scripts/smoke-windows.ps1). Never publishes anything.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [windows-support]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Build installer and smoke test
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install LoopPrism and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install . pyinstaller
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build installer (sidecar + electron-builder)
+        working-directory: desktop
+        run: npm run dist
+
+      - name: Keep the installer for manual testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: LoopPrism-windows-x64-test-build
+          path: desktop/release/*.exe
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Smoke test the installed app
+        run: ./desktop/scripts/smoke-windows.ps1 -WithClaude
+
+      - name: Keep the smoke test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-smoke-logs
+          path: smoke-logs/
+          if-no-files-found: ignore
+
+  tests:
+    name: Unit tests on Windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Python tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+          python -m pytest -q
+
+      - name: Desktop tests
+        working-directory: desktop
+        run: |
+          npm ci
+          npm test
+
+      - name: npm package tests
+        working-directory: npm
+        run: node --test

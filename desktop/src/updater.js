@@ -1,12 +1,15 @@
 "use strict";
 // Looks for a newer desktop release on GitHub and installs it in place.
 //
-// The app is not notarized, so Electron's own auto-updater (which needs a signed
-// app) is not an option. Instead: read the release list, download the .dmg for
-// this Mac's architecture (checking its size and SHA-256), copy the new app out
-// of it, then let a tiny shell script swap it in once this app has quit and
-// start the new one. Where that is not possible (not an installed app, folder
-// not writable) the dmg is saved to Downloads and opened for a manual drag.
+// The app is not signed, so Electron's own auto-updater (which needs a signed
+// app) is not an option. Instead: read the release list and download the
+// installer for this machine (checking its size and SHA-256).
+//   macOS:   copy the new app out of the .dmg, then let a tiny shell script swap
+//            it in once this app has quit and start the new one.
+//   Windows: run the downloaded NSIS installer silently once this app has quit;
+//            it replaces the per-user install and starts the new version.
+// Where that is not possible (not an installed app, folder not writable) the
+// installer is saved to Downloads and opened for a manual install.
 
 const crypto = require("node:crypto");
 const { EventEmitter } = require("node:events");
@@ -51,10 +54,13 @@ function pickLatest(releases, prefix = TAG_PREFIX) {
   return best;
 }
 
-/** The installer for this architecture (macOS dmg). */
+const INSTALLER_EXT = { darwin: "dmg", win32: "exe" };
+
+/** The installer for this platform and architecture (macOS dmg, Windows exe). */
 function pickAsset(release, arch, platform = "darwin") {
-  if (platform !== "darwin") return null;
-  const a = (release.assets ?? []).find((x) => typeof x.name === "string" && x.name.endsWith(`-${arch}.dmg`));
+  const ext = INSTALLER_EXT[platform];
+  if (!ext) return null;
+  const a = (release.assets ?? []).find((x) => typeof x.name === "string" && x.name.endsWith(`-${arch}.${ext}`));
   if (!a) return null;
   const digest = typeof a.digest === "string" && a.digest.startsWith("sha256:") ? a.digest.slice(7).toLowerCase() : null;
   return { name: a.name, url: a.browser_download_url, size: Number(a.size) || null, sha256: digest };
@@ -178,6 +184,9 @@ open ${sh(target)}
 `;
 }
 
+/** Command line for a silent in-place update with the NSIS installer. */
+const windowsInstallerArgs = () => ["/S", "--updated", "--force-run"];
+
 /* ---------- the updater ---------- */
 
 class Updater extends EventEmitter {
@@ -210,6 +219,8 @@ class Updater extends EventEmitter {
   /** Can the app replace itself? Needs an installed bundle in a folder we can write to. */
   canAutoInstall() {
     const { bundle, platform } = this.o;
+    // Windows: the NSIS installer does the replacing, so any packaged app can update itself.
+    if (platform === "win32") return Boolean(bundle);
     if (platform !== "darwin" || !bundle || !bundle.endsWith(".app")) return false;
     try {
       fs.accessSync(path.dirname(bundle), fs.constants.W_OK);
@@ -297,6 +308,14 @@ class Updater extends EventEmitter {
         return this.state;
       }
       this.set({ phase: "installing", percent: 100 });
+      if (this.o.platform === "win32") {
+        // Per-user NSIS, silent. `--updated` marks it as an update and `--force-run`
+        // starts the new version afterwards (the same flags electron-updater uses).
+        const child = this.o.spawnImpl(dest, windowsInstallerArgs(), { detached: true, stdio: "ignore" });
+        child.unref();
+        this.o.quit();
+        return this.state;
+      }
       const target = this.o.bundle;
       const stageDir = path.join(path.dirname(target), `.LoopPrism-update-${info.latest}`);
       const mountDir = path.join(this.o.tmpDir, `loopprism-update-mount-${process.pid}`);
@@ -320,5 +339,5 @@ class Updater extends EventEmitter {
 module.exports = {
   REPO, TAG_PREFIX, DEFAULT_API,
   parseVersion, compareVersions, pickLatest, pickAsset, isTrustedDownload, fetchLatest,
-  downloadAsset, stageApp, installerScript, Updater,
+  downloadAsset, stageApp, installerScript, windowsInstallerArgs, Updater,
 };

@@ -16,6 +16,10 @@ const { Settings } = require("./settings");
 const { Sidecar } = require("./sidecar");
 
 const isDev = !app.isPackaged;
+// Windows has no "opened at login" flag to read back, so the login item passes one.
+const HIDDEN_FLAG = "--hidden";
+const launchedHidden = () =>
+  process.argv.includes(HIDDEN_FLAG) || app.getLoginItemSettings().wasOpenedAtLogin;
 const UI = path.join(__dirname, "ui");
 
 function sidecarBinary() {
@@ -23,7 +27,7 @@ function sidecarBinary() {
   const base = isDev
     ? path.join(__dirname, "..", "sidecar", "dist")
     : path.join(process.resourcesPath, "sidecar");
-  return path.join(base, "lprism", "lprism");
+  return path.join(base, "lprism", process.platform === "win32" ? "lprism.exe" : "lprism");
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -49,10 +53,13 @@ const STATUS_LABEL = {
 };
 
 function trayIcon() {
+  // macOS wants a monochrome "template" image that follows the menu bar's
+  // light/dark; Windows and Linux trays show a regular colour icon.
+  const mac = process.platform === "darwin";
   const img = nativeImage.createFromPath(
-    path.join(__dirname, "..", "assets", "trayTemplate.png"),
+    path.join(__dirname, "..", "assets", mac ? "trayTemplate.png" : "tray.png"),
   );
-  img.setTemplateImage(true);
+  if (mac) img.setTemplateImage(true);
   return img;
 }
 
@@ -99,8 +106,9 @@ function createWindow() {
     minHeight: 520,
     title: "LoopPrism",
     backgroundColor: "#0e0e13",
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 14 },
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hiddenInset", trafficLightPosition: { x: 16, y: 14 } }
+      : { autoHideMenuBar: true }),
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -215,7 +223,7 @@ function registerIpc() {
     const before = settings.all();
     const values = settings.update(patch);
     if ("openAtLogin" in patch) {
-      app.setLoginItemSettings({ openAtLogin: values.openAtLogin, openAsHidden: true });
+      app.setLoginItemSettings({ openAtLogin: values.openAtLogin, openAsHidden: true, args: [HIDDEN_FLAG] });
     }
     if (
       values.proxyPort !== before.proxyPort ||
@@ -259,6 +267,8 @@ app.whenReady().then(async () => {
   registerIpc();
 
   tray = new Tray(trayIcon());
+  // Windows/Linux trays open the app on a click; macOS shows the menu.
+  if (process.platform !== "darwin") tray.on("click", () => showWindow());
   updateTray();
   startUpdater();
 
@@ -270,7 +280,7 @@ app.whenReady().then(async () => {
 
   // Show the window straight away (it says "Starting…"); stay hidden when the
   // login item launched us.
-  if (!app.getLoginItemSettings().wasOpenedAtLogin) createWindow();
+  if (!launchedHidden()) createWindow();
 
   await sidecar.start();
   refreshHooks().catch(() => {});
@@ -278,8 +288,13 @@ app.whenReady().then(async () => {
 
 /** Looks for a newer release a few seconds after launch (at most once a day). */
 function startUpdater() {
-  // The installed bundle: <name>.app/Contents/MacOS/<binary>
-  const bundle = app.isPackaged ? path.resolve(process.execPath, "..", "..", "..") : null;
+  // What the updater replaces: the .app bundle (<name>.app/Contents/MacOS/<binary>) on
+  // macOS; on Windows the installer handles it, so the running exe is enough.
+  const bundle = !app.isPackaged
+    ? null
+    : process.platform === "win32"
+      ? process.execPath
+      : path.resolve(process.execPath, "..", "..", "..");
   const override = process.env.LPRISM_UPDATE_API; // tests / development: a fake release feed
   updater = new Updater({
     current: app.getVersion(),
@@ -301,6 +316,13 @@ function startUpdater() {
   // GitHub is asked at most once a day; the hourly tick only retries a check that failed
   // (offline, rate limit) or runs when a day has passed in a long-running app.
   setTimeout(() => updater.checkIfDue(), 8000);
+  // End-to-end test hook (only with the fake feed above): fetch and install whatever it offers.
+  if (override && process.env.LPRISM_UPDATE_AUTOINSTALL === "1") {
+    setTimeout(async () => {
+      await updater.check({ manual: true });
+      await updater.install();
+    }, 10_000);
+  }
   setInterval(() => updater.checkIfDue(), 60 * 60 * 1000);
 }
 
@@ -319,7 +341,7 @@ async function refreshHooks() {
   settings.update({ hooksHash: hash });
 }
 
-// Closing the window keeps the proxy running in the menu bar.
+// Closing the window keeps the proxy running in the menu bar / system tray.
 app.on("window-all-closed", () => {});
 app.on("activate", () => showWindow());
 

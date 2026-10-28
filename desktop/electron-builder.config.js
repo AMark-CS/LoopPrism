@@ -31,7 +31,7 @@ module.exports = {
   directories: { output: "release", buildResources: "build" },
   files: ["src/**/*", "assets/**/*", "package.json"],
   // The PyInstaller one-dir bundle (built by `npm run sidecar`); the app
-  // spawns Resources/sidecar/lprism/lprism.
+  // spawns resources/sidecar/lprism/lprism (lprism.exe on Windows).
   extraResources: [
     { from: "sidecar/dist/lprism", to: "sidecar/lprism" },
     // The Claude Code / Codex hook installers and scripts (../npm), which the
@@ -55,5 +55,20 @@ module.exports = {
     entitlementsInherit: "build/entitlements.mac.plist",
     gatekeeperAssess: false,
     notarize,
+  },
+  // Windows: a per-user NSIS installer (no admin prompt), so the app can
+  // replace itself later without elevation. Unsigned: SmartScreen warns on
+  // first run ("More info" -> "Run anyway") until a code-signing certificate is
+  // added. The sidecar is frozen per-architecture, so only x64 is built.
+  win: {
+    icon: "build/icon.png",
+    target: [{ target: "nsis", arch: ["x64"] }],
+  },
+  nsis: {
+    oneClick: true,
+    perMachine: false,
+    allowToChangeInstallationDirectory: false,
+    deleteAppDataOnUninstall: false,
+    runAfterFinish: true,
   },
 };

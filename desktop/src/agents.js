@@ -33,11 +33,22 @@ let cachedPath = null;
 /**
  * Apps launched from Finder get a bare PATH, so `claude` and `node` installed
  * by Homebrew, nvm or the Claude installer wouldn't be found. Ask the user's
- * login shell for the real PATH.
+ * login shell for the real PATH. (Windows apps inherit the full user PATH, so
+ * only the usual per-user install folders are added.)
  */
 function loginShellPath() {
   if (cachedPath) return Promise.resolve(cachedPath);
   const home = os.homedir();
+  if (process.platform === "win32") {
+    const appData = process.env.APPDATA || path.join(home, "AppData", "Roaming");
+    cachedPath = [
+      process.env.PATH || process.env.Path || "",
+      path.join(home, ".local", "bin"),
+      path.join(home, ".claude", "local"),
+      path.join(appData, "npm"),
+    ].filter(Boolean).join(path.delimiter);
+    return Promise.resolve(cachedPath);
+  }
   const extras = [
     "/opt/homebrew/bin",
     "/usr/local/bin",
@@ -62,6 +73,14 @@ function loginShellPath() {
   });
 }
 
+/** The child's environment with PATH replaced (Windows spells it `Path` and ignores case). */
+function withPath(base, PATH) {
+  const env = { ...base };
+  for (const k of Object.keys(env)) if (k.toLowerCase() === "path") delete env[k];
+  env[process.platform === "win32" ? "Path" : "PATH"] = PATH;
+  return env;
+}
+
 async function worker(...args) {
   const PATH = await loginShellPath();
   return new Promise((resolve) => {
@@ -71,9 +90,9 @@ async function worker(...args) {
       {
         timeout: 60_000,
         encoding: "utf8",
+        windowsHide: true,
         env: {
-          ...process.env,
-          PATH,
+          ...withPath(process.env, PATH),
           ELECTRON_RUN_AS_NODE: "1",
           LPRISM_AGENT_ROOT: agentRoot(),
         },

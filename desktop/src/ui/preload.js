@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("lp", {
+  platform: process.platform,
   state: () => ipcRenderer.invoke("state"),
   agents: () => ipcRenderer.invoke("agents:list"),
   bundleHash: () => ipcRenderer.invoke("hooks:hash"),

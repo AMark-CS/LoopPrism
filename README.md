@@ -11,6 +11,7 @@
   <a href="https://github.com/AMark-CS/LoopPrism/releases/latest"><img src="https://img.shields.io/github/v/release/AMark-CS/LoopPrism?filter=desktop-v*&label=desktop&color=7c6cf0" alt="Desktop release"></a>
   <a href="https://www.npmjs.com/package/loopprism"><img src="https://img.shields.io/npm/v/loopprism?label=npm&color=cb3837" alt="npm"></a>
   <img src="https://img.shields.io/badge/macOS-arm64%20%7C%20x64-black?logo=apple" alt="macOS">
+  <img src="https://img.shields.io/badge/Windows-x64-0078d4?logo=windows&logoColor=white" alt="Windows">
   <img src="https://img.shields.io/badge/python-3.10+-blue?logo=python&logoColor=white" alt="Python">
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT"></a>
 </p>
@@ -85,15 +86,23 @@ Everything stays on your machine: SQLite on disk, no Docker, no cloud, no accoun
 
 ## Get started
 
-### Desktop app (macOS) — recommended
+### Desktop app (macOS and Windows) — recommended
+
+**macOS**
 
 1. Download the `.dmg` from the [latest release](https://github.com/AMark-CS/LoopPrism/releases/latest)
    (`arm64` for Apple Silicon, `x64` for Intel) and drag **LoopPrism** into Applications.
 2. Open it. First launch: right-click the app → **Open** (it is not notarized yet), or
    `xattr -dr com.apple.quarantine /Applications/LoopPrism.app`.
 
+**Windows (x64)**
+
+1. Download `LoopPrism-<version>-x64.exe` from the [latest release](https://github.com/AMark-CS/LoopPrism/releases/latest) and run it
+   (installs for your user only, no administrator prompt).
+2. It is not code-signed yet, so SmartScreen may warn: click **More info → Run anyway**.
+
 That's it. The app bundles everything (no Python, no terminal), opens on your sessions, connects
-Claude Code and Codex for live runs, and keeps running from the menu bar. Details:
+Claude Code and Codex for live runs, and keeps running from the menu bar (macOS) or system tray (Windows). Details:
 [desktop/README.md](desktop/README.md).
 
 ### Command line
@@ -214,7 +223,7 @@ python scripts/make_demo_sessions.py /tmp/lp-demo
 CLAUDE_CONFIG_DIR=/tmp/lp-demo/.claude CODEX_HOME=/tmp/lp-demo/.codex lprism proxy
 ```
 
-Build the desktop app (macOS): [desktop/README.md](desktop/README.md).
+Build the desktop app (macOS, Windows): [desktop/README.md](desktop/README.md).
 
 </details>
 

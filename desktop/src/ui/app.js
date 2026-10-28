@@ -79,7 +79,7 @@ function applyStatus(s) {
     overlay.classList.remove("hidden");
     $("#overlay-text").textContent =
       s.state === "failed"
-        ? "The bundled proxy keeps crashing. Open the proxy log from Settings, then restart it from the menu bar icon."
+        ? "The bundled proxy keeps crashing. Open the proxy log from Settings, then restart it from the tray icon."
         : "Starting the LoopPrism proxy…";
   }
   updateMcpOut();
@@ -258,6 +258,11 @@ $("#login").onchange = async (e) => {
   const res = await lp.saveSettings({ openAtLogin: e.target.checked });
   if (!res.error) state.settings = res.settings;
 };
+document.body.classList.add(`os-${lp.platform}`);
+if (lp.platform !== "darwin") {
+  $("#reveal").textContent = lp.platform === "win32" ? "Show in Explorer" : "Show in folder";
+  for (const el of document.querySelectorAll("[data-mac]")) el.textContent = el.dataset[lp.platform === "win32" ? "win" : "other"] ?? el.textContent;
+}
 $("#reveal").onclick = () => lp.revealData();
 $("#logs").onclick = () => lp.showLogs();
 $("#browser").onclick = () => state.status.dashboardUrl && lp.openExternal(state.status.dashboardUrl);
@@ -288,7 +293,9 @@ function applyUpdate(u) {
     u.phase === "error"
       ? u.error
       : u.phase === "downloaded"
-        ? "Drag LoopPrism into Applications to finish."
+        ? lp.platform === "win32"
+          ? "Run the installer to finish."
+          : "Drag LoopPrism into Applications to finish."
         : u.phase === "installing"
           ? "LoopPrism will restart."
           : `You have ${u.current}.`;

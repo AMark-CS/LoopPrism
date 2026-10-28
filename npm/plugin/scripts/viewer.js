@@ -2,6 +2,7 @@
 'use strict';
 // `status` and `open` for the slash commands and the `lpa` CLI.
 const fs = require('fs');
+const path = require('path');
 const { spawn } = require('child_process');
 const { baseUrl } = require('./config');
 
@@ -55,22 +56,33 @@ function launcher() {
   return { cmd: 'xdg-open', pre: [] };
 }
 
+/** The installed desktop app, if any: the .app on macOS, the per-user install on Windows. */
+function desktopApp(env = process.env) {
+  const candidates =
+    process.platform === 'darwin'
+      ? ['/Applications/LoopPrism.app']
+      : process.platform === 'win32' && env.LOCALAPPDATA
+        ? [path.join(env.LOCALAPPDATA, 'Programs', 'LoopPrism', 'LoopPrism.exe')]
+        : [];
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
 /** Open the desktop app if installed, otherwise the dashboard in the browser. */
 async function open(log = console.log, url = baseUrl()) {
+  const app = desktopApp();
   const { cmd, pre } = launcher();
-  const app = '/Applications/LoopPrism.app';
-  const args =
-    process.platform === 'darwin' && fs.existsSync(app) ? [app] : [...pre, `${url}/`];
+  // Launching the exe again just brings the running app's window forward.
+  const [run, args] = app ? (process.platform === 'darwin' ? [cmd, [app]] : [app, []]) : [cmd, [...pre, `${url}/`]];
   try {
     await api('/api/health', url);
   } catch {
-    if (args[0] !== app) {
+    if (!app) {
       log(downMessage(url));
       return 1;
     }
   }
-  spawn(cmd, args, { stdio: 'ignore', detached: true }).unref();
-  log(args[0] === app ? 'Opening the LoopPrism app.' : `Opening ${url}/`);
+  spawn(run, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref();
+  log(app ? 'Opening the LoopPrism app.' : `Opening ${url}/`);
   return 0;
 }
 

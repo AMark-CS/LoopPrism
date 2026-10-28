@@ -17,7 +17,8 @@ const codex = require(path.join(root, "lib", "codex"));
 const { codexHome } = require(path.join(root, "lib", "paths"));
 
 function hasCli(name) {
-  const r = spawnSync(name, ["--version"], { encoding: "utf8" });
+  // On Windows `codex` is usually a .cmd shim, which only runs through a shell.
+  const r = spawnSync(name, ["--version"], { encoding: "utf8", shell: process.platform === "win32", windowsHide: true });
   return !r.error && r.status === 0;
 }
 

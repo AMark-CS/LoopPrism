@@ -234,7 +234,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
     setMsg('');
     try {
       await api.resumeSession(id, true);
-      setMsg('Opened in Terminal');
+      setMsg('Opened in a terminal');
     } catch (e) {
       setMsg((e as Error).message);
     }
@@ -284,7 +284,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           </div>
           {!isSub && (
           <div className="flex shrink-0 items-center gap-2">
-            <Button tone="primary" onClick={resume} title="Open a new Terminal window and resume this session">
+            <Button tone="primary" onClick={resume} title="Open a new terminal window and resume this session">
               <Play className="h-3 w-3" /> Resume
             </Button>
             <a
