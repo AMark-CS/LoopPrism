@@ -46,11 +46,111 @@ def iso(t: datetime) -> str:
     return t.strftime("%Y-%m-%dT%H:%M:%S.") + f"{t.microsecond // 1000:03d}Z"
 
 
+MODULE = """\
+import time
+
+from .errors import UnknownEvent
+from .results import Result
+
+HANDLERS = {}
+
+
+def handler(event_type):
+    def register(fn):
+        HANDLERS[event_type] = fn
+        return fn
+    return register
+
+
+def handle_event(event, *, db, clock=time.time):
+    \"\"\"Apply one webhook event exactly once.\"\"\"
+    key = f"{event['id']}:{event['type']}"
+    with db.transaction() as tx:
+        if tx.seen(key):
+            return Result.ignored(key)
+        fn = HANDLERS.get(event["type"])
+        if fn is None:
+            raise UnknownEvent(event["type"])
+        out = fn(event, tx=tx, now=clock())
+        tx.mark_seen(key)
+        return out
+
+
+@handler("charge.succeeded")
+def on_charge(event, *, tx, now):
+    charge = tx.charges.upsert(event["data"], received_at=now)
+    tx.ledger.credit(charge.account, charge.amount)
+    return Result.applied(charge.id)
+
+
+@handler("charge.refunded")
+def on_refund(event, *, tx, now):
+    charge = tx.charges.get(event["data"]["charge"])
+    tx.ledger.debit(charge.account, event["data"]["amount_refunded"])
+    return Result.applied(charge.id)
+"""
+
+
 def lines_of(n: int, rng: random.Random) -> str:
-    out = []
-    for i in range(n):
-        out.append(f"{i + 1:>4}  " + rng.choice(SNIPPET.splitlines()))
-    return "\n".join(out)
+    src = MODULE.splitlines()
+    start = rng.randint(0, max(0, len(src) - 12))
+    chunk = src[start:start + max(10, min(n, len(src)))]
+    return "\n".join(f"{start + i + 1:>4}  {line}" for i, line in enumerate(chunk))
+
+
+NARRATION = {
+    "Read": [
+        "I'll read {fp} to see how it handles repeated deliveries.",
+        "Let me open {fp}; the retry logic should be in there.",
+        "Reading {fp} first so I understand the current behavior before changing anything.",
+    ],
+    "Grep": [
+        "Searching for every caller of `handle_event` to see who relies on the current ordering.",
+        "Let me grep for where the idempotency key is written.",
+        "Checking which code paths touch the retry counter.",
+    ],
+    "Glob": [
+        "Listing the Python sources under `src/` to find the right module.",
+        "Let me see how the tests are laid out.",
+    ],
+    "Edit": [
+        "Found it: the retry re-applies the event before the idempotency key is recorded, so a slow first attempt and its retry can both charge. I'll record the key inside the same transaction.",
+        "The handler needs to check `tx.seen(key)` before running side effects. Making that change now.",
+        "I'll add jitter to the retry so replays stop colliding with the first attempt.",
+    ],
+    "Bash": [
+        "Running the webhook tests to confirm the behavior.",
+        "Let me run the focused test a few times to make sure it is no longer flaky.",
+        "Running the suite to check I did not break anything else.",
+    ],
+}
+
+SUMMARIES = [
+    "The flaky `test_replay` came from a race: a retried webhook could be applied twice because the idempotency key was written after the side effects.\n\nWhat I changed:\n- `src/payments/webhook.py`: the key is now checked and recorded inside one transaction, before any charge happens.\n- `src/payments/retry.py`: retries use jittered backoff, so a replay no longer lands on the first attempt.\n\nThe test passed 20 runs in a row.",
+    "Done. The retry path is idempotent now: `handle_event` ignores an event it has already recorded, and the retry helper reuses the same key.\n\nI left the public function signatures alone, so callers do not need to change.",
+    "Added `test_replay_does_not_double_charge`. It delivers the same event twice, concurrently, and asserts exactly one charge. It fails on the old code and passes now.",
+    "The full suite passes (212 tests). Summary of the change:\n- idempotency key recorded in the handler's transaction\n- jittered retry\n- one regression test for the double charge",
+]
+
+
+def narrate(tool: str, fp: str, rng: random.Random) -> str:
+    return rng.choice(NARRATION[tool]).format(fp=fp)
+
+
+def result_for(tool: str, inp: dict, rng: random.Random, failing: bool) -> str:
+    if failing:
+        return ("============ FAILURES ============\n____ test_replay ____\n"
+                "    assert charges(db) == 1\nE   AssertionError: expected 1 charge, got 2\n"
+                "tests/test_webhook.py:48: AssertionError\n1 failed, 4 passed in 1.31s")
+    if tool == "Bash":
+        return "....." + "\n5 passed in 0.94s"
+    if tool == "Glob":
+        return "\n".join(rng.sample(FILES, 6))
+    if tool == "Grep":
+        return "\n".join(f"{rng.choice(FILES)}:{rng.randint(8, 140)}:    {rng.choice(SNIPPET.splitlines()).strip()}" for _ in range(rng.randint(3, 7)))
+    if tool == "Edit":
+        return f"The file {inp.get('file_path')} has been updated."
+    return lines_of(rng.randint(30, 150), rng)
 
 
 class Clock:
@@ -132,22 +232,23 @@ def claude_session(root: str, project: str, title: str, prompts: list[str], mode
             last_step_of_turn = k == steps_per_turn - 1
             blocks: list[dict] = [{"type": "thinking", "thinking": "", "signature": "S" * rng.randint(300, 900)}]
             if last_step_of_turn:
-                text = rng.choice([
-                    "Done. The change is in place and the test-suite passes; I kept the diff small.",
-                    "That fixes it: the handler now de-duplicates on the event id before applying side effects.",
-                    "I traced the failure to the retry path and fixed it. Summary of the changes is above.",
-                ])
-                blocks.append({"type": "text", "text": text})
+                blocks.append({"type": "text", "text": SUMMARIES[turn % len(SUMMARIES)]})
             else:
-                tool = rng.choice(["Read", "Read", "Grep", "Edit", "Bash", "Glob"])
-                fp = rng.choice(FILES)
+                pos = k / max(1, steps_per_turn - 1)
+                if pos < 0.3:
+                    tool = rng.choice(["Glob", "Grep", "Read", "Read"])
+                elif pos < 0.75:
+                    tool = rng.choice(["Read", "Edit", "Edit", "Bash"])
+                else:
+                    tool = rng.choice(["Bash", "Bash", "Edit"])
+                fp = rng.choice(FILES[:3] if tool in ("Edit", "Bash") else FILES)
                 inp = {"Read": {"file_path": fp}, "Grep": {"pattern": "handle_event", "path": "src"},
                        "Edit": {"file_path": fp, "old_string": "retry(3)", "new_string": "retry(3, jitter=True)"},
                        "Bash": {"command": "pytest -x -q tests/test_webhook.py"}, "Glob": {"pattern": "src/**/*.py"}}[tool]
                 if loop and 8 < n_req < 15:
                     tool, inp = "Bash", {"command": "pytest -x -q tests/test_webhook.py"}
-                blocks.append({"type": "text", "text": f"Let me look at {fp}."} if rng.random() < 0.5 else {"type": "text", "text": ""})
-                blocks[-1] = blocks[-1] if blocks[-1]["text"] else {"type": "text", "text": "Checking the next piece."}
+                if rng.random() < 0.75:
+                    blocks.append({"type": "text", "text": narrate(tool, fp, rng)})
                 tool_id = f"toolu_{n_req:04d}"
                 blocks.append({"type": "tool_use", "id": tool_id, "name": tool, "input": inp})
             out_tok = int(estimate_text(json.dumps(blocks)) * 1.35) + rng.randint(80, 600)
@@ -166,10 +267,8 @@ def claude_session(root: str, project: str, title: str, prompts: list[str], mode
                 break
             if exact is False:
                 pass
-            res_text = lines_of(rng.randint(8, 160), rng)
             is_err = bool(loop and 8 < n_req < 15)
-            if is_err:
-                res_text = "FAILED tests/test_webhook.py::test_replay - AssertionError: expected 1 charge, got 2"
+            res_text = result_for(tool, inp, rng, is_err)
             rm = {"role": "user", "content": [{"type": "tool_result", "tool_use_id": tool_id, "content": res_text, "is_error": is_err}]}
             tool_t = clock.tick(0.2, 4.5, rng)
             rows.append(common({"type": "user", "uuid": str(uuid.uuid4()), "timestamp": iso(tool_t), "message": rm}))

@@ -190,51 +190,6 @@ lprism proxy --verbose                        # debug logging
 </details>
 
 <details>
-<summary><b>REST API</b></summary>
-
-<br>
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/sessions` | Claude Code / Codex sessions (`q`, `agent`, `project`) |
-| `GET /api/sessions/:id` | Details, stats and flagged patterns |
-| `GET /api/sessions/:id/events` | Trajectory events (`kinds`, `q`, `preview`) |
-| `GET /api/sessions/:id/trajectory` | Steps, turns, findings |
-| `GET /api/sessions/:id/context` · `/context/:step` | Context trend · one step's breakdown with items |
-| `GET /api/sessions/:id/cost` | Cost by token type, context, model and turn |
-| `GET /api/sessions/:id/timing` | Where the time went |
-| `GET /api/sessions/:id/export.md` | Markdown export |
-| `POST /api/sessions/:id/resume` · `/delete` | Resume in Terminal · move to the Trash |
-| `GET /api/traces` · `/api/traces/:id` | Live runs and MCP traces |
-| `GET /api/mcp-servers` · `/api/mcp-tools` | Per-server and per-tool stats |
-| `GET /api/cost/summary` · `/api/cost/trace/:id` | Cost overview · per trace |
-| `POST /api/ingest/events` | Agent hook events |
-| `GET /api/health` | Health check |
-
-</details>
-
-<details>
-<summary><b>Architecture</b></summary>
-
-<br>
-
-```
-Agent ──▶ LoopPrism Proxy ──▶ MCP Server
-              │
-              ├── intercepts JSON-RPC, records tool, args, latency
-              ├── writes to SQLite (~/.loopprism/traces.db)
-              └── serves the dashboard (http://localhost:8080)
-```
-
-![LoopPrism architecture, current state](docs/assets/architecture-current.png)
-
-![LoopPrism stages, built vs planned](docs/assets/architecture-stages.png)
-
-Data model: [docs/run-data-model.md](docs/run-data-model.md).
-
-</details>
-
-<details>
 <summary><b>Development</b></summary>
 
 <br>
