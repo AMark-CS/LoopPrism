@@ -4,9 +4,14 @@ Reads from environment variables and ~/.loopprism/config.toml.
 """
 
 import os
-import tomllib
+import sys
 from pathlib import Path
 from typing import Optional
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pyproject.toml promises Python 3.10
+    import tomli as tomllib
 
 
 def _default_db_path() -> str:
