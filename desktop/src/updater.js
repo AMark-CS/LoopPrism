@@ -18,6 +18,7 @@ const { Readable } = require("node:stream");
 const REPO = "AMark-CS/LoopPrism";
 const TAG_PREFIX = "desktop-v";
 const DEFAULT_API = `https://api.github.com/repos/${REPO}/releases?per_page=30`;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /* ---------- versions and releases (pure) ---------- */
 
@@ -196,7 +197,7 @@ class Updater extends EventEmitter {
    */
   constructor(o) {
     super();
-    this.o = { apiUrl: DEFAULT_API, runImpl: run, spawnImpl: spawn, ...o };
+    this.o = { apiUrl: DEFAULT_API, runImpl: run, spawnImpl: spawn, intervalMs: DAY_MS, now: Date.now, ...o };
     this.info = null;
     this.state = { phase: "idle", current: o.current, latest: null, releaseUrl: null, percent: null, error: null, auto: false };
   }
@@ -218,6 +219,33 @@ class Updater extends EventEmitter {
     }
   }
 
+  /**
+   * Show what the last check found, without asking GitHub. ``o.cache`` is
+   * ``{ load(): {at, info} | null, save({at, info}) }`` so the answer survives restarts.
+   */
+  restore() {
+    const c = this.o.cache?.load();
+    if (!c?.info?.latest || !parseVersion(c.info.latest)) return;
+    const info = { ...c.info, current: this.o.current };
+    info.hasUpdate = compareVersions(info.latest, this.o.current) > 0;
+    this.info = info;
+    this.set({
+      phase: info.hasUpdate ? "available" : "idle", latest: info.latest, releaseUrl: info.releaseUrl,
+      auto: info.hasUpdate && Boolean(info.asset) && this.canAutoInstall(), checked: c.at,
+    });
+  }
+
+  /** True when the last successful check is a day old (or there was none). */
+  due() {
+    const c = this.o.cache?.load();
+    return !c || typeof c.at !== "number" || this.o.now() - c.at >= this.o.intervalMs;
+  }
+
+  /** The scheduled check: asks GitHub at most once a day. */
+  async checkIfDue() {
+    return this.due() ? this.check() : this.state;
+  }
+
   /** Ask GitHub. Failures (offline, rate limit) leave things as they were; a manual check reports them. */
   async check({ manual = false } = {}) {
     if (["downloading", "installing"].includes(this.state.phase)) return this.state;
@@ -226,6 +254,7 @@ class Updater extends EventEmitter {
         fetchImpl: this.o.fetchImpl, apiUrl: this.o.apiUrl, current: this.o.current, arch: this.o.arch, platform: this.o.platform,
       });
       this.info = info;
+      this.o.cache?.save({ at: this.o.now(), info });
       this.set({
         phase: info.hasUpdate ? "available" : "idle",
         latest: info.latest,

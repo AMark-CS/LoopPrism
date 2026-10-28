@@ -7,6 +7,7 @@ const DEFAULTS = {
   openAtLogin: false,
   onboarded: false,
   hooksHash: "", // bundled hook scripts last installed by this app
+  updateCache: null, // result of the last update check: { at, info }
 };
 
 const validPort = (n) => Number.isInteger(n) && n >= 1024 && n <= 65535;

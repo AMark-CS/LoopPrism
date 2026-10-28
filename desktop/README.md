@@ -47,8 +47,8 @@ menu bar.
 
 ## Updates
 
-The app checks this repository's GitHub releases a few seconds after launch and then every six
-hours. When a newer `desktop-v*` release exists, an **Update to x.y.z** button appears in the
+The app checks this repository's GitHub releases at most once a day (a few seconds after launch
+when a day has passed since the last check; the last answer is remembered across restarts). When a newer `desktop-v*` release exists, an **Update to x.y.z** button appears in the
 sidebar above the proxy status; when you are on the latest version there is no button.
 **Settings → Updates → Check for updates** checks on demand.
 

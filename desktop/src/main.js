@@ -276,7 +276,7 @@ app.whenReady().then(async () => {
   refreshHooks().catch(() => {});
 });
 
-/** Looks for a newer release a few seconds after launch, then every few hours. */
+/** Looks for a newer release a few seconds after launch (at most once a day). */
 function startUpdater() {
   // The installed bundle: <name>.app/Contents/MacOS/<binary>
   const bundle = app.isPackaged ? path.resolve(process.execPath, "..", "..", "..") : null;
@@ -289,6 +289,7 @@ function startUpdater() {
     tmpDir: app.getPath("temp"),
     downloadsDir: app.getPath("downloads"),
     pid: process.pid,
+    cache: { load: () => settings.get("updateCache"), save: (c) => settings.update({ updateCache: c }) },
     fetchImpl: (url, opts) => net.fetch(url, opts),
     openPath: (p) => shell.openPath(p),
     openExternal: (u) => shell.openExternal(u),
@@ -296,8 +297,11 @@ function startUpdater() {
     ...(override ? { apiUrl: override, trusted: (u) => u.startsWith(new URL(override).origin) } : {}),
   });
   updater.on("state", (s) => win?.webContents.send("update", s));
-  setTimeout(() => updater.check(), 8000);
-  setInterval(() => updater.check(), 6 * 60 * 60 * 1000);
+  updater.restore(); // the button shows from the last answer straight away
+  // GitHub is asked at most once a day; the hourly tick only retries a check that failed
+  // (offline, rate limit) or runs when a day has passed in a long-running app.
+  setTimeout(() => updater.checkIfDue(), 8000);
+  setInterval(() => updater.checkIfDue(), 60 * 60 * 1000);
 }
 
 /**

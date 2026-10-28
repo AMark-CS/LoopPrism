@@ -305,3 +305,47 @@ test("with no installer for this Mac the release page opens instead", async () =
   assert.equal(calls.external.length, 1);
   close();
 });
+
+/* ---- once a day ---- */
+test("the scheduled check asks GitHub at most once a day and remembers the answer", async () => {
+  let stored = null;
+  let asked = 0;
+  let clock = 1_000_000;
+  const mk = () => new u.Updater({
+    current: "0.2.0", arch: "arm64", platform: "darwin", bundle: null, tmpDir: tmp(), downloadsDir: tmp(), pid: 1,
+    fetchImpl: async () => { asked++; return { ok: true, status: 200, json: async () => [release("0.2.1")] }; },
+    cache: { load: () => stored, save: (c) => { stored = c; } }, now: () => clock,
+  });
+  const first = mk();
+  await first.checkIfDue();
+  assert.deepEqual([asked, first.state.phase], [1, "available"]);
+
+  clock += 23 * 3600_000; // same day, e.g. the app was reopened
+  const reopened = mk();
+  reopened.restore();
+  assert.equal(reopened.state.phase, "available"); // the button is back without asking again
+  await reopened.checkIfDue();
+  assert.equal(asked, 1);
+
+  clock += 2 * 3600_000; // now more than a day since the check
+  await reopened.checkIfDue();
+  assert.equal(asked, 2);
+
+  await reopened.check({ manual: true }); // a manual check always asks
+  assert.equal(asked, 3);
+});
+
+test("a cached update disappears once the app is that version, and failed checks are retried", async () => {
+  let stored = { at: 5, info: { latest: "0.2.1", hasUpdate: true, releaseUrl: "x", asset: null } };
+  const up = new u.Updater({
+    current: "0.2.1", arch: "arm64", platform: "darwin", bundle: null, tmpDir: tmp(), downloadsDir: tmp(), pid: 1,
+    fetchImpl: async () => { throw new Error("offline"); }, cache: { load: () => stored, save: (c) => { stored = c; } }, now: () => 6,
+  });
+  up.restore();
+  assert.equal(up.state.phase, "idle"); // already on 0.2.1: no button
+
+  stored = null; // nothing cached (first run, or the last check failed) -> due
+  assert.equal(up.due(), true);
+  await up.checkIfDue();
+  assert.equal(stored, null); // a failure is not remembered, so the next tick retries
+});
