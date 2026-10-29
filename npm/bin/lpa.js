@@ -5,6 +5,7 @@ const path = require('path');
 const claude = require('../lib/claude');
 const { atomicWrite } = require('../lib/fsutil');
 const codex = require('../lib/codex');
+const workbuddy = require('../lib/workbuddy');
 const { configPath } = require('../plugin/scripts/config');
 const viewer = require('../plugin/scripts/viewer');
 const { version } = require('../package.json');
@@ -12,8 +13,8 @@ const { version } = require('../package.json');
 const HELP = `lpa ${version}: LoopPrism for Claude Code and Codex
 
 Usage
-  lpa install [claude|codex|all] [--url <api-url>]   add the hooks (default: all that are found)
-  lpa uninstall [claude|codex|all]                   remove them
+  lpa install [claude|codex|workbuddy|all] [--url <api-url>]   add the hooks (default: all that are found)
+  lpa uninstall [claude|codex|workbuddy|all]                   remove them
   lpa status                                         is LoopPrism up? latest runs
   lpa open                                           open the desktop app or dashboard
 
@@ -33,7 +34,12 @@ function parse(argv) {
 
 function pick(targets) {
   const all = !targets.length || targets.includes('all');
-  return { claude: all || targets.includes('claude'), codex: all || targets.includes('codex'), explicit: !all };
+  return {
+    claude: all || targets.includes('claude'),
+    codex: all || targets.includes('codex'),
+    workbuddy: all || targets.includes('workbuddy'),
+    explicit: !all,
+  };
 }
 
 function saveUrl(url) {
@@ -71,6 +77,20 @@ async function main(argv) {
       console.log(`Codex: hooks written to ${r.file}`);
       console.log('       Open Codex and run /hooks once to review and trust them.');
     }
+    if (want.workbuddy) {
+      if (!workbuddy.available() && !want.explicit) {
+        console.log('WorkBuddy: not found (no ~/.workbuddy), skipped.');
+      } else {
+        try {
+          const r = workbuddy.install();
+          console.log(`WorkBuddy: hooks written to ${r.file}`);
+          console.log('           Restart WorkBuddy so it picks them up. Node.js must be on its PATH.');
+        } catch (err) {
+          console.error(`WorkBuddy: ${err.message}`);
+          failed = true;
+        }
+      }
+    }
     console.log('\nNext: start LoopPrism (desktop app, or `lprism proxy`), then use your agent. `lpa status` shows the runs.');
     return failed ? 1 : 0;
   }
@@ -78,6 +98,7 @@ async function main(argv) {
   if (command === 'uninstall') {
     if (want.claude && claude.available()) claude.uninstall();
     if (want.codex) codex.uninstall();
+    if (want.workbuddy && workbuddy.available()) workbuddy.uninstall();
     console.log('LoopPrism hooks removed.');
     return 0;
   }

@@ -13,7 +13,18 @@ import { ContextTab } from './session/ContextTab';
 import { TrajectoryTab } from './session/TrajectoryTab';
 import type { SessionSummary } from '../types/sessions';
 
-const AGENT_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
+const AGENT_LABEL: Record<string, string> = {
+  'claude-code': 'Claude Code',
+  codex: 'Codex',
+  dsh: 'DeepSeek Harness',
+  workbuddy: 'WorkBuddy',
+};
+const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn'> = {
+  'claude-code': 'muted',
+  codex: 'primary',
+  dsh: 'ok',
+  workbuddy: 'warn',
+};
 const TABS = [
   { key: 'chat', label: 'Chat' },
   { key: 'trajectory', label: 'Trajectory' },
@@ -132,11 +143,13 @@ function SessionList({
             className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1.5 pl-7 pr-2 text-xs outline-none focus:border-[var(--color-primary)]"
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {[
             ['', 'All'],
             ['claude-code', 'Claude Code'],
             ['codex', 'Codex'],
+            ['dsh', 'DeepSeek Harness'],
+            ['workbuddy', 'WorkBuddy'],
           ].map(([k, label]) => (
             <button
               key={k}
@@ -166,7 +179,7 @@ function SessionList({
       <div className="flex-1 overflow-y-auto">
         {isLoading && <Empty>Loading sessions…</Empty>}
         {!isLoading && sessions.length === 0 && (
-          <Empty>{debounced ? 'No sessions match.' : 'No Claude Code or Codex sessions found on this Mac.'}</Empty>
+          <Empty>{debounced ? 'No sessions match.' : 'No agent sessions found on this computer.'}</Empty>
         )}
         {groups.map(([label, items]) => (
           <div key={label}>
@@ -184,6 +197,8 @@ function SessionList({
                   <input
                     type="checkbox"
                     className="mt-1 shrink-0"
+                    disabled={s.read_only}
+                    title={s.read_only ? 'Read-only: delete it from its own app' : undefined}
                     checked={picked.has(s.id)}
                     onChange={(e) => {
                       const n = new Set(picked);
@@ -201,7 +216,7 @@ function SessionList({
                     </div>
                   )}
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-[var(--color-muted-foreground)]">
-                    <Badge tone={s.agent === 'codex' ? 'primary' : 'muted'}>{AGENT_LABEL[s.agent]}</Badge>
+                    <Badge tone={AGENT_TONE[s.agent] ?? 'muted'}>{AGENT_LABEL[s.agent] ?? s.agent}</Badge>
                     <span className="truncate">{basename(s.project)}</span>
                     <span className="ml-auto shrink-0">{ago(s)}</span>
                   </div>
@@ -275,7 +290,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold">{s.title}</h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--color-muted-foreground)]">
-              <Badge tone={s.agent === 'codex' ? 'primary' : 'muted'}>{AGENT_LABEL[s.agent]}</Badge>
+              <Badge tone={AGENT_TONE[s.agent] ?? 'muted'}>{AGENT_LABEL[s.agent] ?? s.agent}</Badge>
               {s.started_at && <span>{parseUtc(s.started_at).toLocaleString()}</span>}
               {s.project && <span className="truncate font-mono">{s.project}</span>}
               {s.models.map((m) => (
@@ -286,9 +301,11 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           </div>
           {!isSub && (
           <div className="flex shrink-0 items-center gap-2">
-            <Button tone="primary" onClick={resume} title="Open a new terminal window and resume this session">
-              <Play className="h-3 w-3" /> Resume
-            </Button>
+            {!s.read_only && (
+              <Button tone="primary" onClick={resume} title="Open a new terminal window and resume this session">
+                <Play className="h-3 w-3" /> Resume
+              </Button>
+            )}
             <a
               href={`/api/sessions/${id}/export.md`}
               download={`${s.title.slice(0, 40)}.md`}
@@ -296,9 +313,11 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
             >
               <Download className="h-3 w-3" /> Export
             </a>
-            <Button tone="danger" onClick={remove}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            {!s.read_only && (
+              <Button tone="danger" onClick={remove}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
           )}
         </div>

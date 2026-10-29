@@ -1,10 +1,12 @@
 /** Types for the session inspector API (/api/sessions). */
 
-export type AgentId = 'claude-code' | 'codex';
+export type AgentId = 'claude-code' | 'codex' | 'dsh' | 'workbuddy';
 
 export interface SessionSummary {
   id: string;
   agent: AgentId;
+  /** LoopPrism only reads these sessions: no resume, no delete. */
+  read_only?: boolean;
   path: string;
   project: string | null;
   title: string;

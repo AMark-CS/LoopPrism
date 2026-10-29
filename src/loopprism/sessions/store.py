@@ -12,7 +12,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Optional
 
-from . import agents, claude_code, codex
+from . import agents, claude_code, codex, dsh, workbuddy
 from . import models as M
 from .models import ParsedSession, SessionMeta
 
@@ -30,9 +30,17 @@ def codex_root() -> str:
     return os.path.join(base, "sessions")
 
 
+# Agents whose sessions are only read: LoopPrism cannot resume or delete them from here.
+READ_ONLY_AGENTS = {"dsh", "workbuddy"}
+
+
+def default_roots() -> dict[str, str]:
+    return {"claude-code": claude_root(), "codex": codex_root(), "dsh": dsh.dsh_root(), "workbuddy": workbuddy.workbuddy_root()}
+
+
 class SessionStore:
     def __init__(self, index_path: Optional[str] = None, roots: Optional[dict[str, str]] = None) -> None:
-        self.roots = roots if roots is not None else {"claude-code": claude_root(), "codex": codex_root()}
+        self.roots = roots if roots is not None else default_roots()
         self._lock = threading.RLock()
         self._cache: "OrderedDict[str, tuple[tuple[float, int], ParsedSession]]" = OrderedDict()
         if index_path:
@@ -86,11 +94,13 @@ class SessionStore:
                 for name in files:
                     if name.startswith("rollout-") and name.endswith(".jsonl"):
                         found.append((os.path.join(dirpath, name), "codex"))
+        found += [(p, "dsh") for p in dsh.discover(self.roots["dsh"])] if self.roots.get("dsh") else []
+        found += [(p, "workbuddy") for p in workbuddy.discover(self.roots["workbuddy"])] if self.roots.get("workbuddy") else []
         return found
 
     @staticmethod
     def _parser(agent: str):
-        return claude_code if agent == "claude-code" else codex
+        return {"claude-code": claude_code, "codex": codex, "dsh": dsh, "workbuddy": workbuddy}[agent]
 
     def _index_file(self, path: str, agent: str) -> None:
         st = os.stat(path)
@@ -147,6 +157,7 @@ class SessionStore:
         d = dict(r)
         d["models"] = json.loads(d.get("models") or "[]")
         d.pop("mtime", None)
+        d["read_only"] = d.get("agent") in READ_ONLY_AGENTS
         return d
 
     def list(self, agent: Optional[str] = None, q: Optional[str] = None, project: Optional[str] = None,

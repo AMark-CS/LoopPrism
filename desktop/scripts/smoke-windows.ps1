@@ -124,6 +124,9 @@ try {
   Step "sets up fixtures (a Claude Code session with subagents, a Codex home)" -Fatal {
     python (Join-Path $repo "tests\support_agents.py") $env:USERPROFILE | Out-Host
     Assert ($LASTEXITCODE -eq 0) "support_agents.py failed"
+    # a DeepSeek Harness session (zstd) and a WorkBuddy session, in their native formats
+    python (Join-Path $repo "tests\support_other_agents.py") $env:USERPROFILE | Out-Host
+    Assert ($LASTEXITCODE -eq 0) "support_other_agents.py failed"
     New-Item -ItemType Directory -Force (Join-Path $env:USERPROFILE ".codex") | Out-Null
   }
 
@@ -145,6 +148,17 @@ try {
     Assert (@($list.sessions | Where-Object { $_.id -eq $sessionId }).Count -eq 1) "fixture session missing"
     $tree = Invoke-RestMethod "$dash/api/sessions/$sessionId/agents"
     Assert ($tree.supported -and $tree.totals.subagents -ge 3) "expected the fixture's subagents, got $($tree.totals.subagents)"
+  }
+
+  Step "reads DeepSeek Harness (zstd) and WorkBuddy sessions in the frozen proxy" {
+    $list = Invoke-RestMethod "$dash/api/sessions?limit=100"
+    $agents = @($list.sessions | ForEach-Object { $_.agent })
+    Assert ($agents -contains "dsh") "no DeepSeek Harness session listed (agents: $($agents -join ', '))"
+    Assert ($agents -contains "workbuddy") "no WorkBuddy session listed (agents: $($agents -join ', '))"
+    $d = Invoke-RestMethod "$dash/api/sessions/session-abc"
+    Assert ($d.session.read_only -and $d.stats.steps -eq 2) "dsh session did not parse: steps=$($d.stats.steps)"
+    $e = Invoke-RestMethod "$dash/api/sessions/s-1"
+    Assert ($e.session.read_only -and $e.stats.steps -eq 2) "WorkBuddy session did not parse: steps=$($e.stats.steps)"
   }
 
   Step "Codex hooks install, as the Apps page runs it" {
@@ -169,6 +183,27 @@ try {
     Wait-Until {
       @((Invoke-RestMethod "$dash/api/traces?limit=50").traces | Where-Object { $_.session_id -eq "smoke-sess-1" }).Count -ge 1
     } 20 "the run to appear in /api/traces"
+  }
+
+  Step "WorkBuddy hooks install, and the hook command from settings.json reaches the API" {
+    $st = Invoke-Worker @("status")
+    Assert ($st.workbuddy.found) "WorkBuddy home not detected"
+    $r = Invoke-Worker @("install", "workbuddy")
+    Assert ($r.ok) "install failed: $($r | ConvertTo-Json -Compress)"
+    Assert ((Invoke-Worker @("status")).workbuddy.connected) "workbuddy not connected after install"
+    $cfg = Get-Content (Join-Path $env:USERPROFILE ".workbuddy\settings.json") -Raw | ConvertFrom-Json
+    $command = $cfg.hooks.UserPromptSubmit[0].hooks[0].command
+    Write-Host "command: $command"
+    $bat = Join-Path $env:TEMP "lp-hook-wb.cmd"
+    Set-Content $bat -Value "@echo off`r`n$command" -Encoding ASCII
+    $payload = '{"hook_event_name":"UserPromptSubmit","session_id":"smoke-wb-1","cwd":"C:\\work","prompt":"hello from workbuddy"}'
+    $out = $payload | cmd /c $bat
+    Assert ("$out".Trim() -eq "{}") "hook printed '$out', expected {}"
+    Wait-Until {
+      @((Invoke-RestMethod "$dash/api/traces?limit=50").traces | Where-Object { $_.session_id -eq "smoke-wb-1" }).Count -ge 1
+    } 20 "the WorkBuddy run to appear in /api/traces"
+    Invoke-Worker @("uninstall", "workbuddy") | Out-Null
+    Assert (-not (Invoke-Worker @("status")).workbuddy.connected) "still connected after uninstall"
   }
 
   Step "lpa status lists the run" {

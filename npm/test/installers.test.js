@@ -70,3 +70,62 @@ test('claude install registers the plugin in an isolated config', { skip: !claud
   assert.equal(claude.isInstalled(env), false);
   assert.equal(fs.existsSync(path.join(home, '.loopprism', 'claude-marketplace')), false);
 });
+
+const workbuddy = require('../lib/workbuddy');
+const wbFile = (home) => path.join(home, '.workbuddy', 'settings.json');
+const wbHooks = (home) => JSON.parse(fs.readFileSync(wbFile(home), 'utf8')).hooks;
+
+test('workbuddy install merges into settings.json, is idempotent and keeps everything else', () => {
+  const home = tmp();
+  const file = wbFile(home);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const mine = { type: 'command', command: 'echo mine', timeout: 9 };
+  const before = { sandbox: { extraAllowWrite: ['/x'] }, enabledPlugins: { a: true }, hooks: { Stop: [{ hooks: [mine] }] } };
+  fs.writeFileSync(file, JSON.stringify(before));
+
+  workbuddy.install({ home, env: {} });
+  workbuddy.install({ home, env: {} });
+  const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(after.sandbox, before.sandbox);
+  assert.deepEqual(after.enabledPlugins, before.enabledPlugins);
+  const mineAndOurs = Object.values(after.hooks).flat().flatMap((g) => g.hooks);
+  assert.equal(mineAndOurs.filter((h) => h.command.includes(workbuddy.MARKER)).length, 5); // not doubled by the 2nd run
+  assert.deepEqual(after.hooks.Stop[0].hooks, [mine]);
+  assert.match(after.hooks.PostToolUse[0].hooks[0].command, /--agent workbuddy$/);
+  assert.equal(after.hooks.PostToolUse[0].matcher, '*');
+  assert.equal(workbuddy.isInstalled({ home, env: {} }), true);
+  assert.ok(fs.existsSync(`${file}.loopprism.bak`)); // the first copy of the user's file is kept
+  assert.deepEqual(JSON.parse(fs.readFileSync(`${file}.loopprism.bak`, 'utf8')), before);
+
+  workbuddy.uninstall({ home, env: {} });
+  const gone = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(gone, before);
+  assert.equal(fs.existsSync(path.join(home, '.loopprism', 'hooks')), false);
+});
+
+test('workbuddy honours WORKBUDDY_CONFIG_DIR, detects the app by its folder and refuses a broken settings.json', () => {
+  const home = tmp();
+  assert.equal(workbuddy.available({ home, env: {} }), false);
+  const dir = path.join(tmp(), 'wb');
+  assert.equal(workbuddy.available({ home, env: { WORKBUDDY_CONFIG_DIR: dir } }), false);
+  workbuddy.install({ home, env: { WORKBUDDY_CONFIG_DIR: dir } });
+  assert.ok(fs.existsSync(path.join(dir, 'settings.json')));
+  assert.equal(workbuddy.available({ home, env: { WORKBUDDY_CONFIG_DIR: dir } }), true);
+
+  const bad = path.join(tmp(), 'b');
+  fs.mkdirSync(bad);
+  fs.writeFileSync(path.join(bad, 'settings.json'), '{ nope');
+  assert.throws(() => workbuddy.install({ home, env: { WORKBUDDY_CONFIG_DIR: bad } }), /Cannot parse/);
+  assert.equal(fs.readFileSync(path.join(bad, 'settings.json'), 'utf8'), '{ nope');
+});
+
+test('Codex and WorkBuddy share the hook scripts: removing one keeps them for the other', () => {
+  const home = tmp();
+  codex.install({ home, env: {} });
+  workbuddy.install({ home, env: {} });
+  const scripts = path.join(home, '.loopprism', 'hooks', 'hook.js');
+  codex.uninstall({ home, env: {} });
+  assert.ok(fs.existsSync(scripts), 'WorkBuddy still needs the scripts');
+  workbuddy.uninstall({ home, env: {} });
+  assert.equal(fs.existsSync(scripts), false);
+});

@@ -14,6 +14,13 @@ const AGENTS = [
     afterConnect: "Restart running Claude Code sessions to start recording.",
   },
   {
+    id: "workbuddy",
+    name: "WorkBuddy",
+    blurb:
+      "Records every prompt and tool call as a run. Adds hooks to ~/.workbuddy/settings.json.",
+    afterConnect: "Restart WorkBuddy so it picks up the hooks.",
+  },
+  {
     id: "codex",
     name: "Codex",
     blurb:
@@ -148,7 +155,7 @@ async function lastSeen(dashboardUrl) {
       } catch {
         continue;
       }
-      const key = { "claude-code": "claude", codex: "codex" }[agent];
+      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy" }[agent];
       const at = Date.parse(`${String(t.timestamp).replace(" ", "T")}Z`);
       if (key && (!seen[key] || at > seen[key])) seen[key] = at;
     }

@@ -3,7 +3,7 @@
 <p align="center"><strong>See what your coding agents actually do.</strong></p>
 
 <p align="center">
-  An inspector for Claude Code and Codex: every session, step by step.<br>
+  An inspector for Claude Code, Codex, DeepSeek Harness and WorkBuddy: every session, step by step.<br>
   What filled the context, where the time went, what it cost. Local-first, zero setup.
 </p>
 
@@ -53,8 +53,10 @@
   <tr>
     <td width="50%" valign="top">
       <h4>🗂 Sessions</h4>
-      Every Claude Code and Codex session on your machine. Search all messages, group by day or
-      project, resume in Terminal, export to Markdown, move to the Trash.
+      Every Claude Code, Codex, DeepSeek Harness (<code>dsh</code>) and WorkBuddy session on your
+      machine. Search all messages, group by day or project, export to Markdown. Claude Code and
+      Codex sessions can also be resumed in a terminal or moved to the Trash from here; the other
+      two are read-only.
     </td>
     <td width="50%" valign="top">
       <h4>🧭 Trajectory</h4>
@@ -126,18 +128,20 @@ pip install "git+https://github.com/AMark-CS/LoopPrism.git"   # or: uv tool inst
 lprism proxy                                                    # then open http://localhost:8080
 ```
 
-### Live runs from Claude Code and Codex
+### Live runs from Claude Code, Codex and WorkBuddy
 
 Sessions are read after the fact. To also watch an agent **as it works**:
 
 ```bash
-npx loopprism install     # adds the hooks to Claude Code and/or Codex, whichever you have
+npx loopprism install     # adds the hooks to Claude Code, Codex and/or WorkBuddy, whichever you have
 lpa status                # newest runs
 ```
 
 Claude Code can also use the plugin directly (`/plugin marketplace add AMark-CS/LoopPrism`, then
-`/plugin install loopprism@loopprism`). In Codex, run `/hooks` once to trust the hooks. Privacy
-options and uninstall: [npm/README.md](npm/README.md).
+`/plugin install loopprism@loopprism`). In Codex, run `/hooks` once to trust the hooks; restart
+WorkBuddy after installing. DeepSeek Harness sessions are read from `~/.dsh` (or `$DSH_HOME`), and
+WorkBuddy's from `~/.workbuddy` (or `$WORKBUDDY_CONFIG_DIR`), with nothing to set up; DeepSeek Harness
+has no live-run hook yet. Privacy options and uninstall: [npm/README.md](npm/README.md).
 
 ## License
 

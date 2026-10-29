@@ -31,10 +31,11 @@ menu bar (macOS) or system tray (Windows).
 
 ## Using it
 
-- **Sessions** page (opens first): browse, search, resume, export and delete your Claude Code and
-  Codex sessions, and inspect each one's chat, trajectory and context. **Live runs** shows what the
-  hooks record as it happens.
-- **Apps** page: switch on **Claude Code** and/or **Codex** and LoopPrism starts
+- **Sessions** page (opens first): browse, search and export your Claude Code, Codex, DeepSeek Harness
+  and WorkBuddy sessions, and inspect each one's chat, trajectory and context. Claude Code and Codex
+  sessions can also be resumed and deleted here; DeepSeek Harness and WorkBuddy ones are read-only
+  (resume or delete them in their own app). **Live runs** shows what the hooks record as it happens.
+- **Apps** page: switch on **Claude Code**, **Codex** and/or **WorkBuddy** and LoopPrism starts
   recording their prompts, tool calls and errors. The first time you open the
   app it offers to enable every app it finds. Switching one off removes its
   hook again. (This runs the same installers as `npx loopprism install`,
@@ -152,7 +153,7 @@ is untested so far.
 | --- | --- |
 | `src/main.js` | Electron main: window, tray, lifecycle |
 | `src/ui/` | The window: sidebar, Apps and Settings pages (the dashboard is embedded) |
-| `src/agents.js`, `src/agent-worker.js` | Detect/connect Claude Code and Codex via the bundled `../npm` installers |
+| `src/agents.js`, `src/agent-worker.js` | Detect/connect Claude Code, Codex and WorkBuddy via the bundled `../npm` installers |
 | `src/settings.js` | Persisted app settings (ports, login item, onboarding) |
 | `src/sidecar.js` | Spawns/supervises the proxy, health checks, restart, cleanup |
 | `src/ports.js` | Free-port selection |

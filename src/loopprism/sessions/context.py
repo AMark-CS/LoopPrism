@@ -52,8 +52,9 @@ IMAGE_TOKENS = 1500  # a typical screenshot after the API's downscaling
 def window_for(step: Step) -> tuple[Optional[int], str]:
     if step.context_window:
         return step.context_window, "reported"
+    model = step.model.lower()
     for prefix, size in WINDOW_PREFIXES:
-        if step.model.startswith(prefix):
+        if model.startswith(prefix):
             return size, "assumed"
     return None, "unknown"
 

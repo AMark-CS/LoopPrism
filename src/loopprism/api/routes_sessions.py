@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
 from ..sessions import actions, agents, analysis, context
+from ..sessions.store import READ_ONLY_AGENTS
 from ..sessions import models as M
 from ..sessions.store import SessionStore
 
@@ -80,7 +81,8 @@ async def list_projects(request: Request):
 async def get_session(session_id: str, request: Request):
     ps = await _load(request, session_id)
     meta = ps.meta.to_dict()
-    meta["resume_command"] = None if "~" in session_id else actions.resume_command(ps.meta)
+    meta["read_only"] = ps.meta.agent in READ_ONLY_AGENTS
+    meta["resume_command"] = None if "~" in session_id or meta["read_only"] else actions.resume_command(ps.meta)
     return {"session": meta, "stats": context.stats(ps), "findings": analysis.findings(ps)}
 
 
@@ -187,6 +189,8 @@ async def resume(session_id: str, request: Request, terminal: bool = False):
     if "~" in session_id:
         raise HTTPException(status_code=400, detail="Subagent transcripts cannot be resumed on their own")
     ps = await _load(request, session_id)
+    if ps.meta.agent in READ_ONLY_AGENTS:
+        raise HTTPException(status_code=400, detail="Resume this session from its own app; LoopPrism only reads it")
     command = actions.resume_command(ps.meta)
     if terminal:
         try:
@@ -204,6 +208,8 @@ async def delete_session(session_id: str, request: Request):
     row = await asyncio.to_thread(store.find, session_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Session not found")
+    if row["agent"] in READ_ONLY_AGENTS:
+        raise HTTPException(status_code=400, detail="Delete this session from its own app; LoopPrism only reads it")
     try:
         dest = await asyncio.to_thread(actions.trash, row["path"], store.allowed_roots())
     except PermissionError as err:

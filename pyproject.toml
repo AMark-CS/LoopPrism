@@ -34,6 +34,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "orjson>=3.10.0",
     "tomli>=2.0; python_version < '3.11'",
+    "zstandard>=0.22; python_version < '3.14'",  # DeepSeek Harness sessions are zstd-compressed
 ]
 
 [project.optional-dependencies]

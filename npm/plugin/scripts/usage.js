@@ -8,6 +8,10 @@
 //   Codex:       ~/.codex/sessions/Y/M/D/rollout-*.jsonl, `token_usage_record`
 //                lines per response, tagged with the turn they belong to.
 //
+//   WorkBuddy:   ~/.workbuddy/projects/<project>/<session>.jsonl, Responses-style items; the
+//                usage of a model response (providerData.rawUsage) sits on one item of it, all
+//                items of a response share providerData.messageId.
+//
 // Returns a list of { model, input_tokens (uncached), output_tokens,
 // cache_read_tokens, cache_write_tokens, cache_write_1h_tokens, long_context,
 // calls }. No dependencies: copied next to hook.js.
@@ -200,12 +204,76 @@ function findCodexRollout(sessionId, home = os.homedir(), env = process.env) {
   return null;
 }
 
+// ------------------------------------------------------------------ WorkBuddy
+
+/** A message the user typed (not an injected reminder or a compaction summary). */
+function isWorkbuddyPrompt(entry) {
+  if (entry.type !== 'message' || entry.role !== 'user') return false;
+  const pd = entry.providerData || {};
+  if (pd.isSummary || pd.isCompacted) return false;
+  // The app prepends its context: <system-reminder ...>...</system-reminder><user_query>prompt</user_query>
+  const text = (Array.isArray(entry.content) ? entry.content : [])
+    .filter((p) => p && typeof p.text === 'string')
+    .map((p) => p.text)
+    .join('')
+    .replace(/<system-reminder\b[^>]*>[\s\S]*?<\/system-reminder>/g, '');
+  return text.trim() !== '';
+}
+
+function workbuddyUsage(entries) {
+  let start = 0;
+  entries.forEach((e, i) => {
+    if (isWorkbuddyPrompt(e)) start = i + 1;
+  });
+  const byId = new Map();
+  for (const e of entries.slice(start)) {
+    const pd = e.providerData || {};
+    const raw = pd.rawUsage;
+    const alt = e.message && e.message.usage;
+    if ((!raw && !alt) || !pd.messageId) continue;
+    if (byId.has(pd.messageId)) continue; // usage of a response is written once; keep the first
+    const r = raw || {};
+    const a = alt || {};
+    const details = r.prompt_tokens_details || {};
+    const prompt = num(r.prompt_tokens) || num(a.input_tokens);
+    const cached = Math.max(
+      num(r.prompt_cache_hit_tokens),
+      num(r.cache_read_input_tokens),
+      num(r.cached_tokens),
+      num(details.cached_tokens),
+      num(a.cache_read_input_tokens),
+    );
+    const written = num(r.cache_creation_input_tokens) || num(r.prompt_cache_write_tokens);
+    byId.set(pd.messageId, {
+      model: pd.model || pd.requestModelId || pd.requestModelName,
+      input: Math.max(0, prompt - cached - written), // prompt_tokens includes the cached part
+      output: num(r.completion_tokens) || num(a.output_tokens),
+      read: cached,
+      write: written,
+    });
+  }
+  const totals = new Totals();
+  for (const c of byId.values()) {
+    totals.add(c.model, {
+      input_tokens: c.input,
+      output_tokens: c.output,
+      cache_read_tokens: c.read,
+      cache_write_tokens: c.write,
+    });
+  }
+  return totals.list();
+}
+
 /** Usage for the turn a Stop hook reports, or [] when it can't be determined. */
 function turnUsage(agent, input, env = process.env) {
   try {
     if (agent === 'claude-code') {
       const file = input.transcript_path;
       return file && fs.existsSync(file) ? claudeUsage(readLines(file)) : [];
+    }
+    if (agent === 'workbuddy') {
+      const file = input.transcript_path;
+      return file && fs.existsSync(file) ? workbuddyUsage(readLines(file)) : [];
     }
     if (agent === 'codex') {
       const file =
@@ -219,4 +287,4 @@ function turnUsage(agent, input, env = process.env) {
   return [];
 }
 
-module.exports = { turnUsage, claudeUsage, codexUsage, findCodexRollout, isUserPrompt };
+module.exports = { turnUsage, claudeUsage, codexUsage, workbuddyUsage, findCodexRollout, isUserPrompt };

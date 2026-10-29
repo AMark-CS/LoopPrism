@@ -109,6 +109,7 @@ h3 { margin: 0 0 4px; font-size: 13px; }
 .sub, .hint { color: var(--muted); margin: 0 0 16px; }
 .hint { margin: 0; font-size: 12px; }
 .cards { display: flex; flex-direction: column; gap: 10px; }
+#agent-note { margin-top: 12px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
 .agent { display: flex; align-items: center; gap: 14px; }
 .agent .info { flex: 1; min-width: 0; }

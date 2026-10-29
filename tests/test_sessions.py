@@ -244,6 +244,8 @@ def home(tmp_path, monkeypatch):
     codex_dir.mkdir(parents=True)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / ".claude"))
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
+    monkeypatch.setenv("DSH_HOME", str(tmp_path / ".dsh"))  # never read the machine's own DeepSeek Harness / WorkBuddy
+    monkeypatch.setenv("WORKBUDDY_CONFIG_DIR", str(tmp_path / ".workbuddy"))
     monkeypatch.setenv("HOME", str(tmp_path))
     return tmp_path
 

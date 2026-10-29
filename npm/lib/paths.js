@@ -18,4 +18,9 @@ function codexHome(env = process.env, home = os.homedir()) {
   return env.CODEX_HOME || path.join(home, '.codex');
 }
 
-module.exports = { packageRoot, stableDirs, codexHome };
+/** WorkBuddy's data folder (WORKBUDDY_CONFIG_DIR overrides it). */
+function workbuddyHome(env = process.env, home = os.homedir()) {
+  return env.WORKBUDDY_CONFIG_DIR || path.join(home, '.workbuddy');
+}
+
+module.exports = { packageRoot, stableDirs, codexHome, workbuddyHome };

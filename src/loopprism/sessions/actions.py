@@ -20,6 +20,8 @@ SAFE_ID = re.compile(r"^[A-Za-z0-9._-]{6,80}$")
 def resume_command(meta: SessionMeta) -> str:
     """The shell command that resumes this session, including the cd."""
     # A Codex history page is listed as "<session>_<thread>"; resuming takes the session.
+    if meta.agent not in ("claude-code", "codex"):
+        raise ValueError(f"{meta.agent} sessions are resumed from their own app")
     rid = meta.id if meta.agent == "claude-code" else meta.id.split("_", 1)[0]
     if not SAFE_ID.match(rid):
         raise ValueError("unexpected session id")
@@ -96,7 +98,8 @@ def trash(path: str, allowed_roots: list[str]) -> str:
 
 def export_markdown(ps: ParsedSession) -> str:
     m = ps.meta
-    lines = [f"# {m.title}", "", f"- Agent: {m.agent}", f"- Session: `{m.id}`"]
+    agent = {"claude-code": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "workbuddy": "WorkBuddy"}.get(m.agent, m.agent)
+    lines = [f"# {m.title}", "", f"- Agent: {agent}", f"- Session: `{m.id}`"]
     if m.project:
         lines.append(f"- Project: `{m.project}`")
     if m.started_at:

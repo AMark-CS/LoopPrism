@@ -69,7 +69,14 @@ function uninstall({ home, env = process.env } = {}) {
   if (fs.existsSync(file)) {
     atomicWrite(file, `${JSON.stringify(stripOurs(readJson(file)), null, 2)}\n`);
   }
-  fs.rmSync(stableDirs(home).hooks, { recursive: true, force: true });
+  // The scripts are shared with WorkBuddy's hooks: keep them while it still uses them.
+  let shared = false;
+  try {
+    shared = require('./workbuddy').isInstalled({ home, env });
+  } catch {
+    /* an unreadable WorkBuddy config does not keep our copy alive */
+  }
+  if (!shared) fs.rmSync(stableDirs(home).hooks, { recursive: true, force: true });
   return { file };
 }
 
