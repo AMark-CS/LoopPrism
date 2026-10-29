@@ -113,7 +113,10 @@ try {
     # the uninstall entry records the folder; `lpa open` and Windows' own uninstaller rely on it
     $found = node -e "const v=require('$repoFwd/npm/plugin/scripts/viewer');console.log(JSON.stringify(v.windowsInstallDirs()))"
     Write-Host "registered install folders: $found"
-    Assert (($found | ConvertFrom-Json) -contains $installDir) "the uninstall entry does not list $installDir"
+    if (@($found | ConvertFrom-Json) -notcontains $installDir) {
+      $raw = (reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall" /s /f LoopPrism /d) -join " | "
+      throw "the uninstall entry does not list $installDir (found: $found; registry says: $raw)"
+    }
     $app = node -e "const v=require('$repoFwd/npm/plugin/scripts/viewer');console.log(v.desktopApp())"
     Assert ($app -eq $appExe) "lpa finds '$app', expected $appExe"
   }

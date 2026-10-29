@@ -57,19 +57,29 @@ function launcher() {
 }
 
 /**
- * Where the Windows installer put the app. The installer records the folder it was given (the
- * user picks it) as `InstallLocation` in its uninstall entry, for this user and for all users.
+ * Where the Windows installer put the app. The installer writes an uninstall entry (for this user
+ * or for all users) whose icon and uninstall command point into the folder the user chose, so
+ * search those entries for LoopPrism rather than assuming the default folder.
  */
 function windowsInstallDirs(run = spawnSync) {
   const dirs = [];
   for (const hive of ['HKCU', 'HKLM']) {
-    const r = run('reg', ['query', `${hive}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall`, '/s', '/v', 'InstallLocation'], {
+    const r = run('reg', ['query', `${hive}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall`, '/s', '/f', 'LoopPrism', '/d'], {
       encoding: 'utf8',
       windowsHide: true,
     });
     for (const line of String(r.stdout || '').split(/\r?\n/)) {
-      const m = /^\s*InstallLocation\s+REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/.exec(line);
-      if (m) dirs.push(m[1]);
+      const m = /^\s*(\w+)\s+REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/.exec(line);
+      if (!m) continue;
+      const [, name, data] = m;
+      let dir = null;
+      if (name === 'InstallLocation') {
+        dir = data;
+      } else if (['DisplayIcon', 'UninstallString', 'QuietUninstallString'].includes(name)) {
+        const exe = /^"([^"]+)"/.exec(data) || /^(.+?\.exe)/i.exec(data);
+        if (exe) dir = path.win32.dirname(exe[1]);
+      }
+      if (dir && !dirs.includes(dir)) dirs.push(dir);
     }
   }
   return dirs;

@@ -42,10 +42,13 @@ test('windowsInstallDirs reads the folders the installer recorded', () => {
   const out = [
     '',
     'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{abc}',
-    '    InstallLocation    REG_SZ    D:\\Tools\\Loop Prism',
+    '    DisplayName    REG_SZ    LoopPrism 0.3.0',
+    '    DisplayIcon    REG_SZ    D:\\Tools\\Loop Prism\\LoopPrism.exe,0',
+    '    UninstallString    REG_SZ    "D:\\Tools\\Loop Prism\\Uninstall LoopPrism.exe" /currentuser',
     '',
     'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Other',
-    '    InstallLocation    REG_SZ    C:\\Other',
+    '    InstallLocation    REG_SZ    C:\\Other\\LoopPrism',
+    '    UninstallString    REG_SZ    C:\\Other\\unins.exe /S',
     '',
   ].join('\r\n');
   const seen = [];
@@ -53,7 +56,7 @@ test('windowsInstallDirs reads the folders the installer recorded', () => {
     seen.push([cmd, args[1].split('\\')[0]]);
     return { stdout: args[1].startsWith('HKCU') ? out : '' };
   };
-  assert.deepEqual(windowsInstallDirs(run), ['D:\\Tools\\Loop Prism', 'C:\\Other']);
+  assert.deepEqual(windowsInstallDirs(run), ['D:\\Tools\\Loop Prism', 'C:\\Other\\LoopPrism', 'C:\\Other']);
   assert.deepEqual(seen, [['reg', 'HKCU'], ['reg', 'HKLM']]);
 });
 
