@@ -50,6 +50,9 @@ class SessionStore:
         self._db.row_factory = sqlite3.Row
         self._fts = True
         self._init_db()
+        from ..optimize.adoption import Adoptions
+
+        self.adoptions = Adoptions(self._db, self._lock)
         self.pending = 0
 
     # ---------------------------------------------------------------- schema
@@ -157,6 +160,19 @@ class SessionStore:
         m = ps.meta
         return [(path, day, m.agent, m.project, model, int(a[0]), int(a[1]), int(a[2]), int(a[3]), int(a[4]),
                  round(a[5], 6) if a[6] else None, int(a[6])) for (day, model), a in agg.items()]
+
+    def costliest(self, since: Optional[str] = None, agent: Optional[str] = None, limit: int = 80) -> list[dict[str, Any]]:
+        """Index rows of the most expensive sessions that started on or after ``since`` (YYYY-MM-DD)."""
+        sql, params = "SELECT * FROM sessions WHERE cost_usd IS NOT NULL AND cost_usd > 0", []
+        if since:
+            sql += " AND substr(started_at, 1, 10) >= ?"
+            params.append(since)
+        if agent:
+            sql += " AND agent = ?"
+            params.append(agent)
+        with self._lock:
+            rows = self._db.execute(sql + " ORDER BY cost_usd DESC LIMIT ?", [*params, limit]).fetchall()
+        return [self._row(r) for r in rows]
 
     def cost_overview(self, since: Optional[str] = None, agent: Optional[str] = None) -> dict[str, Any]:
         """Spend and tokens across every indexed session, by day, model, agent and project."""

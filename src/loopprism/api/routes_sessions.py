@@ -88,6 +88,44 @@ async def cost_overview(request: Request, days: int = Query(30, ge=0, le=3650), 
     return out
 
 
+@router.get("/optimize")
+async def optimize(request: Request, days: int = Query(30, ge=1, le=365), agent: Optional[str] = None):
+    """Suggestions for spending less, with the estimated saving of each and what adopting them did."""
+    from datetime import datetime, timedelta, timezone
+
+    from ..optimize import analyze
+
+    store = get_store(request)
+    await asyncio.to_thread(store.refresh, 5.0)
+    since = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    spend = (store.cost_overview(since, agent)["totals"]["cost"]) or 0.0
+    rows = await asyncio.to_thread(store.costliest, since, agent)
+    result = await asyncio.to_thread(analyze, rows, store.load, spend)
+    states = store.adoptions.states()
+    for s in result["suggestions"]:
+        s["adoption"] = states.get(s["id"])
+    result["days"] = days
+    result["pending"] = store.pending
+    return result
+
+
+@router.post("/optimize/{rule}/{action}")
+async def optimize_action(rule: str, action: str, request: Request):
+    from ..optimize.rules import COPY
+
+    if rule not in COPY:
+        raise HTTPException(status_code=404, detail="Unknown suggestion")
+    ad = get_store(request).adoptions
+    if action == "adopt":
+        return ad.adopt(rule)
+    if action == "dismiss":
+        return ad.dismiss(rule)
+    if action == "reset":
+        ad.reset(rule)
+        return {"state": None}
+    raise HTTPException(status_code=400, detail="Unknown action")
+
+
 @router.get("/projects")
 async def list_projects(request: Request):
     return {"projects": await asyncio.to_thread(get_store(request).projects)}
