@@ -135,5 +135,6 @@ def mock_mcp_backend():
 
 @pytest.fixture(autouse=True)
 def _no_real_dsh_desktop(tmp_path_factory, monkeypatch):
-    """Never read the developer's own DSH Desktop sessions in a test."""
+    """Never read the developer's own DSH Desktop or Cursor sessions in a test."""
     monkeypatch.setenv("DSH_DESKTOP_HOME", str(tmp_path_factory.mktemp("dsh-desktop")))
+    monkeypatch.setenv("CURSOR_USER_DIR", str(tmp_path_factory.mktemp("cursor-user")))

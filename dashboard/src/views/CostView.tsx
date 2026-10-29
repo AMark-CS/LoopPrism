@@ -21,6 +21,7 @@ const AGENTS: [string, string][] = [
   ['workbuddy', 'WorkBuddy'],
   ['opencode', 'OpenCode'],
   ['gemini', 'Gemini CLI'],
+  ['cursor', 'Cursor'],
 ];
 const AGENT_LABEL = Object.fromEntries(AGENTS);
 

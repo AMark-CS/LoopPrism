@@ -81,7 +81,7 @@ LoopPrism 支持 **macOS** 和 **Windows**，两个平台功能一致。
 | **Claude Code** | `~/.claude/projects`（含子代理） | 支持，插件 | 支持 |
 | **Codex** | `~/.codex/sessions` | 支持，`~/.codex/hooks.json` | 支持 |
 | **Gemini CLI** | `~/.gemini/tmp/<项目>/chats`（JSON 与 JSONL），`$GEMINI_CLI_HOME` | 支持，`~/.gemini/settings.json` | 只读 |
-| **Cursor** | 暂不支持 | 支持，`~/.cursor/hooks.json` | 仅实时运行 |
+| **Cursor** | `Cursor/User/globalStorage/state.vscdb`（无花费：Cursor 不记录 token 用量） | 支持，`~/.cursor/hooks.json` | 只读 |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | 支持，插件 `~/.config/opencode/plugins` | 只读 |
 | **DeepSeek Harness**（`dsh`） | `~/.dsh/sessions`（zstd），`$DSH_HOME`，以及 DSH Desktop 自己应用数据目录里的 `dsh-desktop/harness/sessions` | 支持，经其钩子插件（需手动一步） | 只读 |
 | **WorkBuddy** | `~/.workbuddy/projects`，`$WORKBUDDY_CONFIG_DIR` | 支持，`~/.workbuddy/settings.json` | 只读 |

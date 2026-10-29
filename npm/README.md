@@ -28,7 +28,7 @@ You also need LoopPrism running to receive the events: the desktop app, or `lpri
 
 - **Codex asks you to trust new hooks.** After `lpa install`, open Codex and run `/hooks` once to review and trust them.
 - **DeepSeek Harness:** `lpa install dsh` only writes `~/.loopprism/dsh-hooks.json`; it never edits DSH's own profile. In DSH Desktop install the plugin `dsh-hooks-claude-code`, set its `configPath` to that file, and restart. The bridge supports session start, prompt, tool and stop events (no tool failures).
-- **Cursor:** `lpa install cursor` adds hooks to `~/.cursor/hooks.json` (Cursor reloads it by itself). Live runs only for now: Cursor's chats are stored in an undocumented database and are not read yet.
+- **Cursor:** `lpa install cursor` adds hooks to `~/.cursor/hooks.json` (Cursor reloads it by itself). Its chats are read from its own database, with no cost (Cursor does not record token usage).
 - **Gemini CLI:** `lpa install gemini` adds hooks to the `hooks` key of `~/.gemini/settings.json` (`$GEMINI_CLI_HOME` moves the folder); restart Gemini CLI afterwards.
 - **OpenCode:** restart it after `lpa install` so it loads the plugin. Uninstall removes only the file LoopPrism wrote.
 - **WorkBuddy:** restart it after `lpa install` so it reads the hooks. They run `node`, so Node.js must be on the PATH WorkBuddy uses. `WORKBUDDY_CONFIG_DIR` points `lpa` at a different WorkBuddy folder.

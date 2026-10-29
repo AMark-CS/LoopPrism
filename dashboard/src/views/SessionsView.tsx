@@ -21,6 +21,7 @@ const AGENT_LABEL: Record<string, string> = {
   workbuddy: 'WorkBuddy',
   opencode: 'OpenCode',
   gemini: 'Gemini CLI',
+  cursor: 'Cursor',
 };
 const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error' | 'violet' | 'model' | 'event'> = {
   'claude-code': 'primary',
@@ -29,6 +30,7 @@ const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error' |
   workbuddy: 'warn',
   opencode: 'error',
   gemini: 'model',
+  cursor: 'event',
 };
 const TABS = [
   { key: 'chat', label: t('Chat') },
@@ -157,6 +159,7 @@ function SessionList({
             ['workbuddy', 'WorkBuddy'],
             ['opencode', 'OpenCode'],
             ['gemini', 'Gemini CLI'],
+            ['cursor', 'Cursor'],
           ].map(([k, label]) => (
             <button
               key={k}

@@ -154,7 +154,7 @@ LoopPrism runs on **macOS** and **Windows** with the same features on both: the 
 | **Claude Code** | `~/.claude/projects` (also subagent trees) | yes, plugin | yes |
 | **Codex** | `~/.codex/sessions` | yes, `~/.codex/hooks.json` | yes |
 | **Gemini CLI** | `~/.gemini/tmp/<project>/chats` (JSON and JSONL), `$GEMINI_CLI_HOME` | yes, `~/.gemini/settings.json` | read-only |
-| **Cursor** | not yet | yes, `~/.cursor/hooks.json` | live runs only |
+| **Cursor** | `Cursor/User/globalStorage/state.vscdb` (no cost: Cursor records no token usage) | yes, `~/.cursor/hooks.json` | read-only |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | yes, a plugin in `~/.config/opencode/plugins` | read-only |
 | **DeepSeek Harness** (`dsh`) | `~/.dsh/sessions` (zstd), `$DSH_HOME`, and DSH Desktop's own `dsh-desktop/harness/sessions` in its app-data folder | yes, via its hook plugin (one manual step) | read-only |
 | **WorkBuddy** | `~/.workbuddy/projects`, `$WORKBUDDY_CONFIG_DIR` | yes, `~/.workbuddy/settings.json` | read-only |
