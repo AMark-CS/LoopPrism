@@ -59,6 +59,21 @@
 
 ## 支持的应用与模型
 
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/apps/claude-code.svg" width="72" alt="Claude Code"><br><b>Claude Code</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/codex.svg" width="72" alt="Codex"><br><b>Codex</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/gemini-cli.svg" width="72" alt="Gemini CLI"><br><b>Gemini CLI</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/opencode.svg" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/apps/deepseek-harness.svg" width="72" alt="DeepSeek Harness"><br><b>DeepSeek Harness</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/workbuddy.svg" width="72" alt="WorkBuddy"><br><b>WorkBuddy</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/more.svg" width="72" alt="更多应用即将支持"><br><a href="https://github.com/AMark-CS/LoopPrism/issues">更多应用即将支持</a></td>
+    <td></td>
+  </tr>
+</table>
+
 LoopPrism 支持 **macOS** 和 **Windows**，两个平台功能一致。
 
 | 应用 | 会话（从磁盘读取） | 实时运行（hooks） | 在此恢复 / 删除 |

@@ -132,6 +132,21 @@
 
 ## Supported apps and models
 
+<table>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/apps/claude-code.svg" width="72" alt="Claude Code"><br><b>Claude Code</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/codex.svg" width="72" alt="Codex"><br><b>Codex</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/gemini-cli.svg" width="72" alt="Gemini CLI"><br><b>Gemini CLI</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/opencode.svg" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
+  </tr>
+  <tr>
+    <td align="center" width="25%"><img src="docs/assets/apps/deepseek-harness.svg" width="72" alt="DeepSeek Harness"><br><b>DeepSeek Harness</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/workbuddy.svg" width="72" alt="WorkBuddy"><br><b>WorkBuddy</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/more.svg" width="72" alt="More apps coming"><br><a href="https://github.com/AMark-CS/LoopPrism/issues">More apps coming</a></td>
+    <td></td>
+  </tr>
+</table>
+
 LoopPrism runs on **macOS** and **Windows** with the same features on both: the desktop app, the `lprism` CLI, the hooks and the dashboard behave identically (only the system's own wording differs, such as Trash and Recycle Bin).
 
 | App | Sessions (read from disk) | Live runs (hooks) | Resume / delete here |
