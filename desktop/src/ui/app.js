@@ -25,7 +25,8 @@ let route = "sessions";
 let applied = null; // route currently loaded in the iframe (keeps inner navigation when switching tabs)
 
 function dashSrc() {
-  return `${dashboardUrl}/#/${route}`;
+  // theme=auto: the dashboard follows the window's light/dark (set by the Theme setting).
+  return `${dashboardUrl}/?theme=auto#/${route}`;
 }
 
 function showTab(name) {
@@ -229,6 +230,7 @@ function fillSettings() {
   $("#port-proxy").value = s.proxyPort;
   $("#port-dash").value = s.dashboardPort;
   $("#login").checked = s.openAtLogin;
+  for (const r of document.querySelectorAll('input[name="theme"]')) r.checked = r.value === (s.theme || "dark");
   $("#db-path").textContent = state.dbPath;
   $("#version").textContent = `LoopPrism ${state.version}`;
   const st = state.status;
@@ -254,6 +256,12 @@ $("#save-ports").onclick = async () => {
   msg.textContent = "Applied";
   setTimeout(fillSettings, 800);
 };
+for (const r of document.querySelectorAll('input[name="theme"]')) {
+  r.onchange = async () => {
+    const res = await lp.saveSettings({ theme: r.value });
+    if (res.error) toast(res.error);
+  };
+}
 $("#login").onchange = async (e) => {
   const res = await lp.saveSettings({ openAtLogin: e.target.checked });
   if (!res.error) state.settings = res.settings;

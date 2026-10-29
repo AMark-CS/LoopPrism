@@ -288,11 +288,11 @@ function Trend({
               if (step !== undefined) onSelect(step);
             }}
           >
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-            <YAxis tick={{ fontSize: 10, fill: '#71717a' }} axisLine={false} tickLine={false} width={42} tickFormatter={(v) => formatTokens(Number(v))} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+            <YAxis tick={{ fontSize: 10, fill: 'var(--color-muted-foreground)' }} axisLine={false} tickLine={false} width={42} tickFormatter={(v) => formatTokens(Number(v))} />
             <Tooltip
-              cursor={{ fill: '#ffffff10' }}
-              contentStyle={{ background: '#16161e', border: '1px solid #27273a', fontSize: 11 }}
+              cursor={{ fill: 'var(--hover)' }}
+              contentStyle={{ background: 'var(--tooltip-bg)', border: '1px solid var(--color-border)', fontSize: 11 }}
               formatter={(v, name) => [formatTokens(Number(v)), CATEGORY_LABELS[String(name)] ?? String(name)]}
               labelFormatter={(l) => `Step ${l}`}
             />

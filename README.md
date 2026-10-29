@@ -98,7 +98,8 @@ Everything stays on your machine: SQLite on disk, no Docker, no cloud, no accoun
 **Windows (x64)**
 
 1. Download `LoopPrism-<version>-x64.exe` from the [Windows preview release](https://github.com/AMark-CS/LoopPrism/releases)
-   (the pre-release named "LoopPrism for Windows") and run it (installs for your user only, no administrator prompt).
+   (the pre-release named "LoopPrism for Windows") and run it. The installer lets you choose the install folder
+   and whether to install for just you (default, no administrator prompt) or for everyone on the PC.
 2. It is not code-signed yet, so SmartScreen may warn: click **More info → Run anyway**.
 
 That's it. The app bundles everything (no Python, no terminal), opens on your sessions, connects

@@ -3,7 +3,7 @@
 // `status` and `open` for the slash commands and the `lpa` CLI.
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const { baseUrl } = require('./config');
 
 async function api(pathname, url = baseUrl()) {
@@ -56,15 +56,43 @@ function launcher() {
   return { cmd: 'xdg-open', pre: [] };
 }
 
-/** The installed desktop app, if any: the .app on macOS, the per-user install on Windows. */
-function desktopApp(env = process.env) {
-  const candidates =
-    process.platform === 'darwin'
-      ? ['/Applications/LoopPrism.app']
-      : process.platform === 'win32' && env.LOCALAPPDATA
-        ? // the per-user installer names the folder after the package; the product name is the fallback
-          ['loopprism-desktop', 'LoopPrism'].map((d) => path.join(env.LOCALAPPDATA, 'Programs', d, 'LoopPrism.exe'))
-        : [];
+/**
+ * Where the Windows installer put the app. The installer records the folder it was given (the
+ * user picks it) as `InstallLocation` in its uninstall entry, for this user and for all users.
+ */
+function windowsInstallDirs(run = spawnSync) {
+  const dirs = [];
+  for (const hive of ['HKCU', 'HKLM']) {
+    const r = run('reg', ['query', `${hive}\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall`, '/s', '/v', 'InstallLocation'], {
+      encoding: 'utf8',
+      windowsHide: true,
+    });
+    for (const line of String(r.stdout || '').split(/\r?\n/)) {
+      const m = /^\s*InstallLocation\s+REG_(?:EXPAND_)?SZ\s+(.+?)\s*$/.exec(line);
+      if (m) dirs.push(m[1]);
+    }
+  }
+  return dirs;
+}
+
+/** The installed desktop app, if any: the .app on macOS, the Windows install wherever it is. */
+function desktopApp(env = process.env, lookup = windowsInstallDirs) {
+  let candidates = [];
+  if (process.platform === 'darwin') {
+    candidates = ['/Applications/LoopPrism.app'];
+  } else if (process.platform === 'win32') {
+    const defaults = env.LOCALAPPDATA
+      ? // the per-user default; the folder is named after the package, the product name is the fallback
+        ['loopprism-desktop', 'LoopPrism'].map((d) => path.join(env.LOCALAPPDATA, 'Programs', d))
+      : [];
+    let chosen = [];
+    try {
+      chosen = lookup();
+    } catch {
+      /* no registry access: fall back to the default folders */
+    }
+    candidates = [...chosen, ...defaults].map((d) => path.join(d, 'LoopPrism.exe'));
+  }
   return candidates.find((p) => fs.existsSync(p)) || null;
 }
 
@@ -87,7 +115,7 @@ async function open(log = console.log, url = baseUrl()) {
   return 0;
 }
 
-module.exports = { status, open, api };
+module.exports = { status, open, api, desktopApp, windowsInstallDirs };
 
 if (require.main === module) {
   const [, , command] = process.argv;

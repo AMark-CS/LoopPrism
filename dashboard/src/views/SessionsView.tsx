@@ -160,7 +160,7 @@ function SessionList({
             </Button>
           </div>
         )}
-        {error && <div className="text-[11px] text-[#f87171]">{error}</div>}
+        {error && <div className="text-[11px] text-[var(--tone-error-fg)]">{error}</div>}
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -177,7 +177,7 @@ function SessionList({
               <div
                 key={s.id}
                 className={`flex gap-2 border-b border-[var(--color-border)] px-3 py-2.5 ${
-                  activeId === s.id ? 'bg-[var(--color-accent)]' : 'hover:bg-[#ffffff08]'
+                  activeId === s.id ? 'bg-[var(--color-accent)]' : 'hover:bg-[var(--hover)]'
                 }`}
               >
                 {selecting && (
@@ -312,7 +312,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           </div>
         )}
         {findings.filter((f) => f.severity !== 'info').length > 0 && tab === 'chat' && (
-          <div className="text-[11px] text-[#fbbf24]">
+          <div className="text-[11px] text-[var(--tone-warn-fg)]">
             {findings.filter((f) => f.severity !== 'info').length} patterns worth a look — see Trajectory.
           </div>
         )}

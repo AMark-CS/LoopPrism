@@ -3,12 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Set the theme before first paint (the full logic, including live changes, is in src/lib/theme.ts).
+      (function () {
+        try {
+          var m = new URLSearchParams(location.search).get('theme') || sessionStorage.getItem('lp-theme') || 'dark';
+          var light = m === 'light' || (m === 'auto' && matchMedia('(prefers-color-scheme: light)').matches);
+          document.documentElement.dataset.theme = light ? 'light' : 'dark';
+        } catch (e) {}
+      })();
+    </script>
     <title>LoopPrism — See what your agents actually do</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <script type="module" crossorigin src="/assets/index-I6QHjTqD.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DldzmU0_.css">
+    <script type="module" crossorigin src="/assets/index-Di2ukhNV.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CU9EzqJG.css">
   </head>
   <body>
     <div id="root"></div>

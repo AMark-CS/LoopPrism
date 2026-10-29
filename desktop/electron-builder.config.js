@@ -56,18 +56,23 @@ module.exports = {
     gatekeeperAssess: false,
     notarize,
   },
-  // Windows: a per-user NSIS installer (no admin prompt), so the app can
-  // replace itself later without elevation. Unsigned: SmartScreen warns on
-  // first run ("More info" -> "Run anyway") until a code-signing certificate is
-  // added. The sidecar is frozen per-architecture, so only x64 is built.
+  // Windows: an NSIS installer. Unsigned: SmartScreen warns on first run ("More info" ->
+  // "Run anyway") until a code-signing certificate is added. The sidecar is frozen
+  // per-architecture, so only x64 is built.
+  //
+  // It is the assisted installer (not one-click) so the user can choose where to install: a
+  // wizard with an install-folder page, and a page to install for just this user (the default,
+  // no administrator prompt, and the app can update itself silently) or for all users. Silent
+  // installs still work (`/S`, and `/D=<folder>` to pick the location), which is how the app
+  // updates itself; an update reuses the folder the app was installed in.
   win: {
     icon: "build/icon.png",
     target: [{ target: "nsis", arch: ["x64"] }],
   },
   nsis: {
-    oneClick: true,
+    oneClick: false,
     perMachine: false,
-    allowToChangeInstallationDirectory: false,
+    allowToChangeInstallationDirectory: true,
     deleteAppDataOnUninstall: false,
     runAfterFinish: true,
   },

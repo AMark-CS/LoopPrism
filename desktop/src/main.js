@@ -106,7 +106,7 @@ function createWindow() {
     minWidth: 820,
     minHeight: 520,
     title: "LoopPrism",
-    backgroundColor: "#0e0e13",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0e0e13" : "#f6f6fa",
     ...(process.platform === "darwin"
       ? { titleBarStyle: "hiddenInset", trafficLightPosition: { x: 16, y: 14 } }
       : { autoHideMenuBar: true }),
@@ -223,6 +223,7 @@ function registerIpc() {
   handle("settings:save", async (patch) => {
     const before = settings.all();
     const values = settings.update(patch);
+    if ("theme" in patch) nativeTheme.themeSource = values.theme;
     if ("openAtLogin" in patch) {
       app.setLoginItemSettings({ openAtLogin: values.openAtLogin, openAsHidden: true, args: [HIDDEN_FLAG] });
     }
@@ -254,13 +255,12 @@ function registerIpc() {
 app.on("second-instance", () => showWindow());
 
 app.whenReady().then(async () => {
-  if (process.platform !== "darwin") {
-    // The UI is dark-only: give the OS title bar and scrollbars the dark theme too, and drop the
-    // default File/Edit/View menu bar that Windows and Linux would show above it.
-    nativeTheme.themeSource = "dark";
-    Menu.setApplicationMenu(null);
-  }
   settings = new Settings(path.join(app.getPath("userData"), "settings.json"));
+  // The Theme setting ("dark" | "light" | "system") drives Electron's nativeTheme: the window's
+  // title bar and scrollbars, and `prefers-color-scheme` for the app UI and the embedded dashboard.
+  nativeTheme.themeSource = settings.get("theme");
+  // Windows and Linux would show a default File/Edit/View menu bar above the UI.
+  if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   sidecar = new Sidecar({
     binary: sidecarBinary(),
     logFile: path.join(app.getPath("logs"), "sidecar.log"),
@@ -304,7 +304,7 @@ async function runTour(dir) {
   fs.mkdirSync(dir, { recursive: true });
   const shot = async (name) => {
     const image = await win.webContents.capturePage();
-    fs.writeFileSync(path.join(dir, `${name}.png`), image.toPNG());
+    fs.writeFileSync(path.join(dir, `${process.env.LPRISM_TOUR_PREFIX || ""}${name}.png`), image.toPNG());
     console.log(`tour: ${name} ${image.getSize().width}x${image.getSize().height}`);
   };
   while (status.state !== "running") await wait(250);
@@ -321,7 +321,7 @@ async function runTour(dir) {
     showWindow("sessions");
     for (const view of ["chat", "trajectory", "context", "agents"]) {
       await win.webContents.executeJavaScript(
-        `document.querySelector("#dash").src = ${JSON.stringify(`${status.dashboardUrl}/#/sessions/${sid}/${view}`)}`,
+        `document.querySelector("#dash").src = ${JSON.stringify(`${status.dashboardUrl}/?theme=auto#/sessions/${sid}/${view}`)}`,
       );
       await wait(3000);
       await shot(`session-${view}`);

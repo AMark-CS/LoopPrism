@@ -6,11 +6,13 @@ const DEFAULTS = {
   proxyPort: 4317,
   dashboardPort: 8080,
   openAtLogin: false,
+  theme: "dark", // "dark" | "light" | "system"
   onboarded: false,
   hooksHash: "", // bundled hook scripts last installed by this app
   updateCache: null, // result of the last update check: { at, info }
 };
 
+const THEMES = ["dark", "light", "system"];
 const validPort = (n) => Number.isInteger(n) && n >= 1024 && n <= 65535;
 
 class Settings {
@@ -38,6 +40,7 @@ class Settings {
     for (const key of Object.keys(DEFAULTS)) {
       if (key in patch) next[key] = patch[key];
     }
+    if (!THEMES.includes(next.theme)) throw new Error("Theme must be dark, light or system.");
     if (!validPort(next.proxyPort) || !validPort(next.dashboardPort)) {
       throw new Error("Ports must be numbers between 1024 and 65535.");
     }

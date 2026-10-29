@@ -8,16 +8,16 @@ import { Badge, Empty } from '../../components/ui';
 import type { EventKind, Finding, SessionEvent, TrajectoryStep } from '../../types/sessions';
 
 const KIND_STYLE: Record<string, { label: string; cls: string }> = {
-  system: { label: 'SYSTEM', cls: 'bg-[#26262f] text-[#a1a1aa]' },
-  user: { label: 'USER', cls: 'bg-[#16264d] text-[#7aa2f7]' },
-  context: { label: 'CONTEXT', cls: 'bg-[#10301f] text-[#4ade80]' },
-  assistant: { label: 'ASSISTANT', cls: 'bg-[#2b2150] text-[#b9a6ff]' },
-  thinking: { label: 'THINKING', cls: 'bg-[#3a1a35] text-[#f0abfc]' },
-  tool_call: { label: 'TOOL', cls: 'bg-[#3a2a0c] text-[#fbbf24]' },
-  tool_result: { label: 'RESULT', cls: 'bg-[#3a2a0c] text-[#fbbf24]' },
-  compaction: { label: 'COMPACT', cls: 'bg-[#3a1717] text-[#f87171]' },
-  model_change: { label: 'MODEL', cls: 'bg-[#0c2f3a] text-[#67e8f9]' },
-  system_event: { label: 'EVENT', cls: 'bg-[#1f1f28] text-[#71717a]' },
+  system: { label: 'SYSTEM', cls: 'bg-[var(--tone-system-bg)] text-[var(--tone-system-fg)]' },
+  user: { label: 'USER', cls: 'bg-[var(--tone-user-bg)] text-[var(--tone-user-fg)]' },
+  context: { label: 'CONTEXT', cls: 'bg-[var(--tone-ok-bg)] text-[var(--tone-ok-fg)]' },
+  assistant: { label: 'ASSISTANT', cls: 'bg-[var(--tone-primary-bg)] text-[var(--tone-primary-fg)]' },
+  thinking: { label: 'THINKING', cls: 'bg-[var(--tone-think-bg)] text-[var(--tone-think-fg)]' },
+  tool_call: { label: 'TOOL', cls: 'bg-[var(--tone-tool-bg)] text-[var(--tone-tool-fg)]' },
+  tool_result: { label: 'RESULT', cls: 'bg-[var(--tone-tool-bg)] text-[var(--tone-tool-fg)]' },
+  compaction: { label: 'COMPACT', cls: 'bg-[var(--tone-error-bg)] text-[var(--tone-error-fg)]' },
+  model_change: { label: 'MODEL', cls: 'bg-[var(--tone-model-bg)] text-[var(--tone-model-fg)]' },
+  system_event: { label: 'EVENT', cls: 'bg-[var(--tone-event-bg)] text-[var(--tone-event-fg)]' },
 };
 
 const FILTERS: { key: string; label: string; kinds: EventKind[] }[] = [
@@ -166,7 +166,7 @@ function EventRow({
   return (
     <div
       ref={ref}
-      className={`border-b border-[var(--color-border)] ${focused ? 'bg-[#1b1740]' : ''} ${e.sidechain ? 'opacity-70' : ''}`}
+      className={`border-b border-[var(--color-border)] ${focused ? 'bg-[var(--row-focus)]' : ''} ${e.sidechain ? 'opacity-70' : ''}`}
     >
       <button
         type="button"

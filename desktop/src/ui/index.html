@@ -79,6 +79,15 @@
           <div><button id="save-ports" class="primary">Apply and restart proxy</button> <span id="port-msg" class="msg"></span></div>
         </div>
         <div class="card form">
+          <h3>Appearance</h3>
+          <div class="seg" role="radiogroup" aria-label="Theme">
+            <label><input type="radio" name="theme" value="dark" /><span>Dark</span></label>
+            <label><input type="radio" name="theme" value="light" /><span>Light</span></label>
+            <label><input type="radio" name="theme" value="system" /><span>System</span></label>
+          </div>
+          <p class="hint">System follows your operating system's light or dark setting.</p>
+        </div>
+        <div class="card form">
           <h3>General</h3>
           <label class="switchrow"><span>Open LoopPrism at login<small data-mac data-win="Keeps the proxy running in the system tray." data-other="Keeps the proxy running in the tray.">Keeps the proxy running in the menu bar.</small></span>
             <input type="checkbox" id="login" class="switch" /></label>

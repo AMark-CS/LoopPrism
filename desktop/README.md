@@ -11,7 +11,10 @@ menu bar (macOS) or system tray (Windows).
 
 1. Download `LoopPrism-<version>-x64.exe` from the [Releases](https://github.com/AMark-CS/LoopPrism/releases) page (the
    pre-release named "LoopPrism for Windows", tagged `desktop-win-v*`) and run it.
-   It installs for the current user (no administrator prompt) and starts LoopPrism.
+   The installer is a short wizard: you can choose the **install folder**, and whether to install for just
+   you (the default, no administrator prompt) or for all users of the PC. LoopPrism starts when it finishes.
+   For a scripted install, `LoopPrism-<version>-x64.exe /S /D=C:\Tools\LoopPrism` installs silently into
+   that folder (`/D=` must be the last argument).
 2. The installer is not code-signed, so Windows SmartScreen may say "Windows protected your PC":
    click **More info → Run anyway**.
 3. Closing the window keeps LoopPrism in the system tray (bottom right, maybe under the `^`);
@@ -43,7 +46,8 @@ menu bar (macOS) or system tray (Windows).
 - **Estimated cost** in the Runs header and on each run is the turn's token usage priced at the
   providers' current API prices (updated with the app). Subscription plans bill differently, so read it as
   "what this would cost on the API".
-- **Settings** page: proxy/dashboard ports, open at login, where the data lives.
+- **Settings** page: proxy/dashboard ports, theme (**Dark**, **Light** or **System**, which follows the
+  operating system), open at login, where the data lives. Dark is the default.
 - On Windows the **Resume** button in Sessions opens a new console window, and **Delete** sends the
   session to the Recycle Bin.
 
@@ -70,8 +74,9 @@ Clicking the button downloads the installer for this machine's platform and arch
 checks its size and SHA-256 against the release. On macOS it then copies the new app out of the
 `.dmg`, quits, swaps the app in place and reopens it; if the app is not in a folder it can write
 to (for example it was installed by an administrator), the `.dmg` is saved to Downloads and opened
-so you can drag it into Applications yourself. On Windows it quits and runs the per-user installer
-silently, which replaces the app and starts the new version. A copy that is not installed (a
+so you can drag it into Applications yourself. On Windows it quits and runs the installer silently, which
+replaces the app in the folder it was installed to and starts the new version (an install for all users shows
+Windows' administrator prompt). A copy that is not installed (a
 development run) gets the installer saved to Downloads and opened instead. Downloads only ever
 come from this repository's release assets.
 

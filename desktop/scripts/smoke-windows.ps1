@@ -15,9 +15,11 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$repoFwd = $repo.Replace([char]92, [char]47) # forward slashes, for require() in node -e
 $dash = "http://127.0.0.1:8080"
 $proxy = "http://127.0.0.1:4317"
-$installDir = Join-Path $env:LOCALAPPDATA "Programs\loopprism-desktop" # electron-builder names it after the package
+# A folder the user would pick in the installer wizard: not the default, with a space in its name.
+$installDir = Join-Path $env:USERPROFILE "Apps\Loop Prism"
 $appExe = Join-Path $installDir "LoopPrism.exe"
 $resources = Join-Path $installDir "resources"
 $logDir = Join-Path $env:APPDATA "LoopPrism\logs"
@@ -90,18 +92,30 @@ Write-Host "Installer: $($installer.Name) ($([math]::Round($installer.Length / 1
 $feed = $null
 try {
   Step "installs silently for the current user" -Fatal {
-    $p = Start-Process $installer.FullName -ArgumentList "/S" -Wait -PassThru
+    # /S = silent, /D = install folder (NSIS needs it last and unquoted).
+    $p = Start-Process $installer.FullName -ArgumentList "/S /D=$installDir" -Wait -PassThru
     Assert ($p.ExitCode -eq 0) "installer exit code $($p.ExitCode)"
     # The NSIS stub may hand over to another process, so the files can land after it returns.
     try { Wait-Until { Test-Path $appExe } 120 "$appExe" } catch {
       $found = Get-ChildItem $env:LOCALAPPDATA, $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter "LoopPrism.exe" -Recurse -Depth 4 -ErrorAction SilentlyContinue |
         Select-Object -First 5 -ExpandProperty FullName
-      $programs = (Get-ChildItem (Join-Path $env:LOCALAPPDATA "Programs") -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name) -join ", "
-      throw "missing $appExe; LoopPrism.exe found at: [$($found -join '; ')]; LOCALAPPDATA\Programs holds: [$programs]"
+      throw "missing $appExe; LoopPrism.exe found at: [$($found -join '; ')]"
     }
     Assert (Test-Path (Join-Path $resources "sidecar\lprism\lprism.exe")) "missing bundled lprism.exe"
     Assert (Test-Path (Join-Path $resources "agent-hooks\plugin\scripts\hook.js")) "missing bundled hooks"
     Assert (Test-Path (Join-Path $resources "agent-hooks\.claude-plugin\marketplace.json")) "missing bundled marketplace"
+  }
+
+  Step "the install went to the chosen folder, and not to the default one" {
+    $default = Join-Path $env:LOCALAPPDATA "Programs"
+    Assert (-not (Test-Path (Join-Path $default "loopprism-desktop\LoopPrism.exe"))) "also installed to the default folder"
+    Assert (-not (Test-Path (Join-Path $default "LoopPrism\LoopPrism.exe"))) "also installed to the default folder"
+    # the uninstall entry records the folder; `lpa open` and Windows' own uninstaller rely on it
+    $found = node -e "const v=require('$repoFwd/npm/plugin/scripts/viewer');console.log(JSON.stringify(v.windowsInstallDirs()))"
+    Write-Host "registered install folders: $found"
+    Assert (($found | ConvertFrom-Json) -contains $installDir) "the uninstall entry does not list $installDir"
+    $app = node -e "const v=require('$repoFwd/npm/plugin/scripts/viewer');console.log(v.desktopApp())"
+    Assert ($app -eq $appExe) "lpa finds '$app', expected $appExe"
   }
 
   Step "sets up fixtures (a Claude Code session with subagents, a Codex home)" -Fatal {
@@ -179,31 +193,43 @@ try {
     }
   }
 
-  Step "UI tour: screenshots of every page (and the real desktop) for comparison with macOS" {
-    Stop-App
+  Step "UI tour: both themes, every page (and the real desktop), for comparison with macOS" {
     $shots = Join-Path $repo "smoke-logs\screenshots"
     New-Item -ItemType Directory -Force $shots | Out-Null
-    $env:LPRISM_TOUR_DIR = $shots
-    $env:LPRISM_TOUR_SESSION = $sessionId
-    $env:LPRISM_TOUR_QUIT = "1"
-    try { $script:app = Start-Process $appExe -PassThru } finally {
-      Remove-Item Env:LPRISM_TOUR_DIR, Env:LPRISM_TOUR_SESSION, Env:LPRISM_TOUR_QUIT -ErrorAction SilentlyContinue
+    $settingsFile = Join-Path $env:APPDATA "LoopPrism\settings.json"
+    foreach ($theme in @("light", "dark")) {
+      Stop-App
+      # The Theme setting lives in settings.json; write it the way the Settings page would.
+      $cfg = if (Test-Path $settingsFile) { Get-Content $settingsFile -Raw | ConvertFrom-Json } else { [pscustomobject]@{} }
+      $cfg | Add-Member -NotePropertyName theme -NotePropertyValue $theme -Force
+      $cfg | ConvertTo-Json -Depth 6 | Set-Content $settingsFile -Encoding UTF8
+      $env:LPRISM_TOUR_DIR = $shots
+      $env:LPRISM_TOUR_PREFIX = "$theme-"
+      $env:LPRISM_TOUR_SESSION = $sessionId
+      $env:LPRISM_TOUR_QUIT = "1"
+      try { $script:app = Start-Process $appExe -PassThru } finally {
+        Remove-Item Env:LPRISM_TOUR_DIR, Env:LPRISM_TOUR_PREFIX, Env:LPRISM_TOUR_SESSION, Env:LPRISM_TOUR_QUIT -ErrorAction SilentlyContinue
+      }
+      # The window is still on the second page when live.png lands: grab the whole screen then,
+      # so the real title bar and window frame are in the picture.
+      Wait-Until { Test-Path (Join-Path $shots "$theme-live.png") } 120 "the $theme tour to reach the Live runs page"
+      try {
+        Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+        $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
+        $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+        $g = [System.Drawing.Graphics]::FromImage($bmp)
+        $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
+        $bmp.Save((Join-Path $shots "$theme-desktop-native.png"), [System.Drawing.Imaging.ImageFormat]::Png)
+        Write-Host "desktop screenshot ($theme) $($b.Width)x$($b.Height)"
+      } catch { Write-Host "no desktop screenshot: $($_.Exception.Message)" }
+      Wait-Until { Test-Path (Join-Path $shots "$theme-narrow.png") } 120 "the $theme tour to finish"
+      Wait-Until { -not (Get-Process -Name LoopPrism -ErrorAction SilentlyContinue) } 60 "the app to quit after the tour"
     }
-    # The window is still on the second page when live.png lands: grab the whole screen then,
-    # so the real title bar and window frame are in the picture.
-    Wait-Until { Test-Path (Join-Path $shots "live.png") } 120 "the tour to reach the Live runs page"
-    try {
-      Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-      $b = [System.Windows.Forms.SystemInformation]::VirtualScreen
-      $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
-      $g = [System.Drawing.Graphics]::FromImage($bmp)
-      $g.CopyFromScreen($b.Left, $b.Top, 0, 0, $bmp.Size)
-      $bmp.Save((Join-Path $shots "desktop-native.png"), [System.Drawing.Imaging.ImageFormat]::Png)
-      Write-Host "desktop screenshot $($b.Width)x$($b.Height)"
-    } catch { Write-Host "no desktop screenshot: $($_.Exception.Message)" }
-    Wait-Until { Test-Path (Join-Path $shots "narrow.png") } 120 "the tour to finish"
-    Assert (@(Get-ChildItem $shots -Filter *.png).Count -ge 9) "expected at least 9 screenshots"
-    Wait-Until { -not (Get-Process -Name LoopPrism -ErrorAction SilentlyContinue) } 60 "the app to quit after the tour"
+    Assert (@(Get-ChildItem $shots -Filter *.png).Count -ge 18) "expected screenshots of both themes"
+    # The two themes must actually differ: identical files would mean the setting did nothing.
+    $light = (Get-FileHash (Join-Path $shots "light-settings.png")).Hash
+    $dark = (Get-FileHash (Join-Path $shots "dark-settings.png")).Hash
+    Assert ($light -ne $dark) "light and dark screenshots are identical"
     $script:app = Start-Process $appExe -PassThru
     Wait-Until { Test-Healthy } 120 "health after the tour"
   }
