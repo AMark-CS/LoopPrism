@@ -10,12 +10,13 @@ const { packageRoot, stableDirs, workbuddyHome } = require('./paths');
 const { atomicWrite, backupOnce } = require('./fsutil');
 
 const MARKER = path.join('.loopprism', 'hooks', 'hook.js');
-// WorkBuddy's events are SessionStart, SessionEnd, PreToolUse, PostToolUse, UserPromptSubmit,
-// Stop and PreCompact. There is no separate "tool failed" event.
+// WorkBuddy's CLI sends Claude Code's events with the same payloads (hook_event_name, session_id,
+// transcript_path, cwd, plus prompt / tool_name / tool_input / tool_response).
 const WANTED = [
   { event: 'SessionStart' },
   { event: 'UserPromptSubmit' },
   { event: 'PostToolUse', matcher: '*' },
+  { event: 'PostToolUseFailure', matcher: '*' },
   { event: 'Stop' },
   { event: 'SessionEnd', timeout: 2 },
 ];

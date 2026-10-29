@@ -89,7 +89,7 @@ test('workbuddy install merges into settings.json, is idempotent and keeps every
   assert.deepEqual(after.sandbox, before.sandbox);
   assert.deepEqual(after.enabledPlugins, before.enabledPlugins);
   const mineAndOurs = Object.values(after.hooks).flat().flatMap((g) => g.hooks);
-  assert.equal(mineAndOurs.filter((h) => h.command.includes(workbuddy.MARKER)).length, 5); // not doubled by the 2nd run
+  assert.equal(mineAndOurs.filter((h) => h.command.includes(workbuddy.MARKER)).length, 6); // not doubled by the 2nd run
   assert.deepEqual(after.hooks.Stop[0].hooks, [mine]);
   assert.match(after.hooks.PostToolUse[0].hooks[0].command, /--agent workbuddy$/);
   assert.equal(after.hooks.PostToolUse[0].matcher, '*');
