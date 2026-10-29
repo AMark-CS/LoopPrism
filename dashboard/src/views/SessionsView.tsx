@@ -18,12 +18,14 @@ const AGENT_LABEL: Record<string, string> = {
   codex: 'Codex',
   dsh: 'DeepSeek Harness',
   workbuddy: 'WorkBuddy',
+  opencode: 'OpenCode',
 };
-const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn'> = {
+const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error'> = {
   'claude-code': 'muted',
   codex: 'primary',
   dsh: 'ok',
   workbuddy: 'warn',
+  opencode: 'error',
 };
 const TABS = [
   { key: 'chat', label: 'Chat' },
@@ -150,6 +152,7 @@ function SessionList({
             ['codex', 'Codex'],
             ['dsh', 'DeepSeek Harness'],
             ['workbuddy', 'WorkBuddy'],
+            ['opencode', 'OpenCode'],
           ].map(([k, label]) => (
             <button
               key={k}

@@ -135,6 +135,68 @@ _OPENAI: dict[str, ModelPricing] = {
     "gpt-5": _GPT_5_CODEX,
 }
 
+# Other model families (USD per million tokens, the vendors' published pay-as-you-go API prices,
+# first/standard tier where a price depends on prompt length). Exact ids first; a model that is
+# not listed (a newer version, a regional variant) falls back to the newest known price of its
+# family, see _FAMILIES. Override any of them in ~/.loopprism/pricing.json.
+_OTHER: dict[str, ModelPricing] = {
+    # DeepSeek
+    "deepseek-chat": ModelPricing(0.28, 0.42, 0.028),
+    "deepseek-reasoner": ModelPricing(0.28, 0.42, 0.028),
+    "deepseek-v3.2": ModelPricing(0.28, 0.42, 0.028),
+    "deepseek-v3.1": ModelPricing(0.56, 1.68, 0.07),
+    "deepseek-r1": ModelPricing(0.55, 2.19, 0.14),
+    # MiniMax
+    "minimax-m2": ModelPricing(0.30, 1.20, 0.03, 0.375),
+    "minimax-m2.1": ModelPricing(0.30, 1.20, 0.03, 0.375),
+    # Zhipu / Z.ai GLM
+    "glm-4.5": ModelPricing(0.60, 2.20, 0.11),
+    "glm-4.5-air": ModelPricing(0.20, 1.10, 0.03),
+    "glm-4.5-flash": ModelPricing(0.0, 0.0),
+    "glm-4.6": ModelPricing(0.60, 2.20, 0.11),
+    "glm-4.7": ModelPricing(0.60, 2.20, 0.11),
+    "glm-5": ModelPricing(1.00, 3.20, 0.20),
+    # Alibaba Qwen
+    "qwen3-max": ModelPricing(1.20, 6.00),
+    "qwen-max": ModelPricing(1.60, 6.40),
+    "qwen-plus": ModelPricing(0.40, 1.20),
+    "qwen-flash": ModelPricing(0.05, 0.40),
+    "qwen3-coder-plus": ModelPricing(1.00, 5.00),
+    "qwen3-coder-flash": ModelPricing(0.30, 1.50),
+    # Moonshot Kimi
+    "kimi-k2": ModelPricing(0.60, 2.50, 0.15),
+    "kimi-k2-thinking": ModelPricing(0.60, 2.50, 0.15),
+    # Google Gemini
+    "gemini-2.5-pro": ModelPricing(1.25, 10.0, 0.125),
+    "gemini-2.5-flash": ModelPricing(0.30, 2.50, 0.03),
+    "gemini-2.5-flash-lite": ModelPricing(0.10, 0.40, 0.01),
+    "gemini-3-pro": ModelPricing(2.00, 12.0, 0.20),
+    "gemini-3-flash": ModelPricing(0.50, 3.00, 0.05),
+}
+
+_FREE = {"big-pickle"}
+
+# (prefix of the normalised model id, price): the first match wins, so list the longer prefix first.
+_FAMILIES: list[tuple[str, ModelPricing]] = [
+    ("deepseek-r", _OTHER["deepseek-r1"]),
+    ("deepseek", _OTHER["deepseek-v3.2"]),
+    ("minimax", _OTHER["minimax-m2.1"]),
+    ("glm-4.5-air", _OTHER["glm-4.5-air"]),
+    ("glm-4", _OTHER["glm-4.7"]),
+    ("glm-", _OTHER["glm-5"]),
+    ("qwen3-coder-flash", _OTHER["qwen3-coder-flash"]),
+    ("qwen3-coder", _OTHER["qwen3-coder-plus"]),
+    ("qwen3-max", _OTHER["qwen3-max"]),
+    ("qwen-flash", _OTHER["qwen-flash"]),
+    ("qwen", _OTHER["qwen-plus"]),
+    ("kimi", _OTHER["kimi-k2"]),
+    ("gemini-3-flash", _OTHER["gemini-3-flash"]),
+    ("gemini-3", _OTHER["gemini-3-pro"]),
+    ("gemini-2.5-flash-lite", _OTHER["gemini-2.5-flash-lite"]),
+    ("gemini-2.5-flash", _OTHER["gemini-2.5-flash"]),
+    ("gemini", _OTHER["gemini-2.5-pro"]),
+]
+
 PROVIDER_PRICING: dict[str, dict[str, ModelPricing]] = {
     "anthropic": _ANTHROPIC,
     "openai": _OPENAI,
@@ -232,9 +294,14 @@ def lookup(model: str) -> Optional[ModelPricing]:
     over = _overrides()
     if key in over:
         return over[key]
-    for table in (_ANTHROPIC, _OPENAI):
+    for table in (_ANTHROPIC, _OPENAI, _OTHER):
         if key in table:
             return table[key]
+    if key.endswith("-free") or key in _FREE:
+        return ModelPricing(0.0, 0.0)  # free tiers (OpenCode Zen's "-free" models, ...)
+    for prefix, pricing in _FAMILIES:
+        if key.startswith(prefix):
+            return pricing
     return None
 
 

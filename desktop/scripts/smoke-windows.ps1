@@ -248,9 +248,9 @@ try {
       try { $script:app = Start-Process $appExe -PassThru } finally {
         Remove-Item Env:LPRISM_TOUR_DIR, Env:LPRISM_TOUR_PREFIX, Env:LPRISM_TOUR_SESSION, Env:LPRISM_TOUR_QUIT -ErrorAction SilentlyContinue
       }
-      # The window is still on the second page when live.png lands: grab the whole screen then,
+      # The window is still on the second page when cost.png lands: grab the whole screen then,
       # so the real title bar and window frame are in the picture.
-      Wait-Until { Test-Path (Join-Path $shots "$theme-live.png") } 120 "the $theme tour to reach the Live runs page"
+      Wait-Until { Test-Path (Join-Path $shots "$theme-cost.png") } 120 "the $theme tour to reach the Cost page"
       try {
         Add-Type -AssemblyName System.Windows.Forms, System.Drawing
         $b = [System.Windows.Forms.SystemInformation]::VirtualScreen

@@ -1,6 +1,7 @@
 import './index.css';
 import { Activity } from 'lucide-react';
 import { useRoute } from './lib/route';
+import { CostView } from './views/CostView';
 import { LiveView } from './views/LiveView';
 import { SessionsView } from './views/SessionsView';
 
@@ -9,12 +10,13 @@ const inDesktopApp = window.parent !== window;
 
 const VIEWS = [
   { key: 'sessions', label: 'Sessions' },
-  { key: 'live', label: 'Live runs' },
+  { key: 'cost', label: 'Cost' },
 ] as const;
 
 export default function App() {
   const [seg, go] = useRoute();
-  const view = seg[0] === 'live' ? 'live' : 'sessions';
+  // #/live is the old run viewer (MCP and hook runs); it is reached from the Cost page.
+  const view = seg[0] === 'live' ? 'live' : seg[0] === 'cost' ? 'cost' : 'sessions';
   return (
     <div className="flex h-screen flex-col">
       {!inDesktopApp && (
@@ -39,7 +41,7 @@ export default function App() {
           ))}
         </nav>
       )}
-      {view === 'live' ? <LiveView /> : <SessionsView />}
+      {view === 'live' ? <LiveView /> : view === 'cost' ? <CostView /> : <SessionsView />}
     </div>
   );
 }

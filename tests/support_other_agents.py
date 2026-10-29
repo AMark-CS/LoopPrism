@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import sys
 
 import zstandard
@@ -108,6 +109,47 @@ def wb_rows():
 
 
 
+def opencode_db(path: str) -> None:
+    """A minimal OpenCode database: one session of two steps, the second priced by OpenCode itself."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    c = sqlite3.connect(path)
+    c.executescript(
+        """
+        CREATE TABLE session (id TEXT PRIMARY KEY, project_id TEXT, parent_id TEXT, slug TEXT, directory TEXT, title TEXT,
+            version TEXT, time_created INTEGER, time_updated INTEGER);
+        CREATE TABLE message (id TEXT PRIMARY KEY, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+        CREATE TABLE part (id TEXT PRIMARY KEY, message_id TEXT, session_id TEXT, time_created INTEGER, time_updated INTEGER, data TEXT);
+        """
+    )
+    sid = "ses_one"
+    c.execute("INSERT INTO session VALUES (?,?,?,?,?,?,?,?,?)", (sid, "p", None, "x", "/work/app", "Fix the parser", "1.18.0", T0, T0 + 9000))
+    c.execute("INSERT INTO session VALUES (?,?,?,?,?,?,?,?,?)", ("ses_child", "p", sid, "y", "/work/app", "subagent", "1.18.0", T0, T0 + 9000))
+    msgs = [
+        ("m1", T0, {"role": "user", "time": {"created": T0}, "model": {"providerID": "p", "modelID": "glm-5.1"}}),
+        ("m2", T0 + 1000, {"role": "assistant", "modelID": "glm-5.1", "providerID": "zhipu", "finish": "stop", "cost": 0.0}),
+    ]
+    for mid, t, d in msgs:
+        c.execute("INSERT INTO message VALUES (?,?,?,?,?)", (mid, sid, t, t, json.dumps(d)))
+    tokens = lambda i, o, r, cr, cw: {"input": i, "output": o, "reasoning": r, "total": i + o + r + cr + cw, "cache": {"read": cr, "write": cw}}  # noqa: E731
+    parts = [
+        ("p1", "m1", T0, {"type": "text", "text": "Fix the parser"}),
+        ("p2", "m2", T0 + 1000, {"type": "step-start"}),
+        ("p3", "m2", T0 + 1100, {"type": "reasoning", "text": "Read it first.", "time": {"start": T0 + 1100, "end": T0 + 1200}}),
+        ("p4", "m2", T0 + 1300, {"type": "tool", "tool": "read", "callID": "c1", "state": {
+            "status": "completed", "input": {"filePath": "parser.py"}, "output": "def parse(): pass", "time": {"start": T0 + 1300, "end": T0 + 1800}}}),
+        ("p5", "m2", T0 + 1900, {"type": "tool", "tool": "bash", "callID": "c2", "state": {
+            "status": "error", "input": {"command": "false"}, "error": "exit 1", "time": {"start": T0 + 1900, "end": T0 + 2000}}}),
+        ("p6", "m2", T0 + 2100, {"type": "step-finish", "reason": "tool-calls", "cost": 0.0, "tokens": tokens(1000, 50, 20, 4000, 0)}),
+        ("p7", "m2", T0 + 3000, {"type": "step-start"}),
+        ("p8", "m2", T0 + 3100, {"type": "text", "text": "Fixed it."}),
+        ("p9", "m2", T0 + 4000, {"type": "step-finish", "reason": "stop", "cost": 0.25, "tokens": tokens(200, 30, 0, 5000, 0)}),
+    ]
+    for pid, mid, t, d in parts:
+        c.execute("INSERT INTO part VALUES (?,?,?,?,?,?)", (pid, mid, sid, t, t, json.dumps(d)))
+    c.commit()
+    c.close()
+
+
 def write(base: str) -> dict[str, str]:
     """Write one session per agent under ``base``; returns their paths."""
     d = os.path.join(base, ".dsh", "sessions", "--work-app--", "session-abc")
@@ -121,6 +163,12 @@ def write(base: str) -> dict[str, str]:
     with open(wb_path, "w") as fh:
         fh.write(jl(wb_rows()))
     return {"dsh": dsh_path, "workbuddy": wb_path}
+
+
+def write_opencode(base: str) -> str:
+    path = os.path.join(base, "opencode", "opencode.db")
+    opencode_db(path)
+    return path
 
 
 if __name__ == "__main__":

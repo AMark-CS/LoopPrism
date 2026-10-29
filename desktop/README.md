@@ -34,7 +34,9 @@ menu bar (macOS) or system tray (Windows).
 - **Sessions** page (opens first): browse, search and export your Claude Code, Codex, DeepSeek Harness
   and WorkBuddy sessions, and inspect each one's chat, trajectory and context. Claude Code and Codex
   sessions can also be resumed and deleted here; DeepSeek Harness and WorkBuddy ones are read-only
-  (resume or delete them in their own app). **Live runs** shows what the hooks record as it happens.
+  (resume or delete them in their own app). **Cost** adds up what every agent spent, by day, model,
+  agent and project. Runs recorded by the proxy and the hooks, including MCP tool calls, are in the run
+  viewer linked at the bottom of that page.
 - **Apps** page: switch on **Claude Code**, **Codex** and/or **WorkBuddy** and LoopPrism starts
   recording their prompts, tool calls and errors. The first time you open the
   app it offers to enable every app it finds. Switching one off removes its

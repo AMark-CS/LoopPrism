@@ -7,10 +7,10 @@ import zstandard
 from httpx import ASGITransport, AsyncClient
 
 from loopprism.api.app import create_app
-from loopprism.sessions import context, dsh, workbuddy
+from loopprism.sessions import context, dsh, opencode, workbuddy
 from loopprism.sessions.store import SessionStore
 
-from tests.support_other_agents import dsh_rows, frames, jl, wb_rows  # noqa: E402
+from tests.support_other_agents import dsh_rows, frames, jl, wb_rows, write_opencode  # noqa: E402
 
 
 @pytest.fixture
@@ -65,7 +65,7 @@ class TestDshParse:
         assert (m.turns, m.steps, m.tool_calls, m.fidelity, m.version) == (1, 2, 1, "exact", "v4")
         assert m.models == ["deepseek-v4-flash"]
         assert m.started_at == "2026-08-17T13:55:41.000Z"
-        assert m.cost_usd is None  # no published price for this model: no cost rather than a guess
+        assert m.cost_usd > 0  # priced with the DeepSeek family price (uncached 900 + cached 10800 in, 70 out)
 
     def test_events_skip_replacements_and_duplicates(self, dsh_home):
         ps = self.parse(dsh_home)
@@ -153,21 +153,103 @@ class TestWorkBuddy:
         assert {x["key"]: x for x in c["categories"]}["unattributed"]["tokens"] > 0  # system prompt + tools inferred
 
 
+# ------------------------------------------------------------------- OpenCode
+@pytest.fixture
+def oc_home(tmp_path, monkeypatch):
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+    return write_opencode(str(tmp_path))
+
+
+class TestOpenCode:
+    def test_discover_lists_top_level_sessions_only(self, oc_home):
+        found = opencode.discover(opencode.opencode_db())
+        assert list(found) == [f"{oc_home}#ses_one"]
+
+    def test_parse(self, oc_home):
+        ps = opencode.parse(f"{oc_home}#ses_one")
+        m = ps.meta
+        assert (m.id, m.agent, m.project, m.title, m.fidelity) == ("ses_one", "opencode", "/work/app", "Fix the parser", "estimated")
+        assert (m.turns, m.steps, m.tool_calls, m.models, m.version) == (1, 2, 2, ["glm-5.1"], "1.18.0")
+        assert [(e.kind, e.step) for e in ps.events] == [
+            ("user", None), ("thinking", 0), ("tool_call", 0), ("tool_result", None), ("tool_call", 0),
+            ("tool_result", None), ("assistant", 1)]
+        s0, s1 = ps.steps
+        # tokens.input is uncached; reasoning is billed as output
+        assert (s0.input_tokens, s0.output_tokens, s0.cache_read_tokens) == (1000, 70, 4000)
+        assert s0.tools_ms == 500.0
+        ok, bad = [e for e in ps.events if e.kind == "tool_result"]
+        assert (ok.text, ok.is_error, bad.text, bad.is_error) == ("def parse(): pass", False, "exit 1", True)
+        assert s0.cost_usd > 0 and s1.cost_usd > 0  # priced from the GLM table, not OpenCode's reported 0 / 0.25
+
+    def test_opencode_reported_cost_is_used_for_models_we_cannot_price(self, oc_home):
+        import sqlite3
+
+        c = sqlite3.connect(oc_home)
+        c.execute("UPDATE message SET data = replace(data, 'glm-5.1', 'mystery-model-1') WHERE id = 'm2'")
+        c.commit()
+        c.close()
+        s0, s1 = opencode.parse(f"{oc_home}#ses_one").steps
+        assert (s0.cost_usd, s1.cost_usd) == (0.0, 0.25)
+
+
+# ------------------------------------------------------------------- pricing
+class TestPricing:
+    @pytest.mark.parametrize("model,price", [
+        ("deepseek-chat", (0.28, 0.42)), ("Deepseek-V4.1-Flash", (0.28, 0.42)), ("deepseek/deepseek-reasoner", (0.28, 0.42)),
+        ("MiniMax-M3", (0.30, 1.20)), ("minimax-m2.7", (0.30, 1.20)),
+        ("glm-4.6", (0.60, 2.20)), ("GLM-5.1", (1.00, 3.20)), ("glm-4.5-air", (0.20, 1.10)),
+        ("qwen3-max", (1.20, 6.00)), ("qwen3-coder-480b", (1.00, 5.00)), ("qwen3.6-plus", (0.40, 1.20)),
+        ("kimi-k2.5", (0.60, 2.50)), ("gemini-3-pro-preview", (2.00, 12.0)),
+        ("deepseek-v4-flash-free", (0.0, 0.0)), ("big-pickle", (0.0, 0.0)),
+    ])
+    def test_models_from_other_vendors_are_priced(self, model, price):
+        from loopprism.cost.pricing import lookup
+
+        p = lookup(model)
+        assert p is not None and (p.input_cost_per_m, p.output_cost_per_m) == price
+
+    def test_unknown_models_have_no_price(self):
+        from loopprism.cost.pricing import lookup
+
+        assert lookup("hy3") is None and lookup("auto") is None and lookup("") is None
+
+    def test_cache_reads_are_cheaper(self):
+        from loopprism.cost.pricing import usage_cost
+
+        plain = usage_cost("deepseek-chat", {"input_tokens": 1_000_000})
+        cached = usage_cost("deepseek-chat", {"cache_read_tokens": 1_000_000})
+        assert plain == pytest.approx(0.28) and cached == pytest.approx(0.028)
+
+
 # ------------------------------------------------------------- store and API
 @pytest.fixture
 def both(tmp_path, monkeypatch, dsh_home, wb_home):
     # no Claude Code or Codex data: only the two new agents
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "no-claude"))
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / "no-codex"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "no-xdg"))
     monkeypatch.setenv("HOME", str(tmp_path))
 
 
 class TestStoreAndApi:
+    def test_cost_overview_adds_up_every_agent(self, both, oc_home):
+        store = SessionStore(None)
+        store.refresh(5)
+        o = store.cost_overview()
+        assert set(a["key"] for a in o["by_agent"]) == {"dsh", "workbuddy", "opencode"}
+        steps = sum(a["steps"] for a in o["by_agent"])
+        assert o["totals"]["steps"] == steps == 6 and o["totals"]["sessions"] == 3
+        assert o["by_day"] and o["by_model"] and o["totals"]["cost"] > 0
+        assert "hy3" not in o["unpriced_models"]  # not in these fixtures
+        assert store.cost_overview(agent="opencode")["totals"]["steps"] == 2
+        assert store.cost_overview(since="2999-01-01")["totals"]["steps"] is None  # nothing that late
+        assert [t["agent"] for t in o["top_sessions"]][0] in {"dsh", "workbuddy", "opencode"}
+
     def test_the_store_lists_both_agents_and_searches_them(self, both):
         store = SessionStore(None)
         assert store.refresh(5)["indexed"] == 2
         rows = {r["agent"]: r for r in store.list()}
-        assert set(rows) == {"dsh", "workbuddy"}
+        assert set(rows) >= {"dsh", "workbuddy"}
         assert rows["dsh"]["read_only"] and rows["workbuddy"]["read_only"]
         assert [r["agent"] for r in store.list(agent="dsh")] == ["dsh"]
         assert store.list(q="parser")  # titles and messages are searchable

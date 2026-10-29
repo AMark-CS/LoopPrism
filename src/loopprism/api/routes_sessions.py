@@ -72,6 +72,22 @@ async def list_sessions(
     return {"sessions": rows, "total": store.count(), "pending": progress["pending"]}
 
 
+@router.get("/cost/overview")
+async def cost_overview(request: Request, days: int = Query(30, ge=0, le=3650), agent: Optional[str] = None):
+    """What the agents cost, across every session on this machine (``days=0``: all time)."""
+    store = get_store(request)
+    await asyncio.to_thread(store.refresh, 5.0)
+    since = None
+    if days:
+        from datetime import datetime, timedelta, timezone
+
+        since = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    out = await asyncio.to_thread(store.cost_overview, since, agent)
+    out["days"] = days
+    out["pending"] = store.pending
+    return out
+
+
 @router.get("/projects")
 async def list_projects(request: Request):
     return {"projects": await asyncio.to_thread(get_store(request).projects)}

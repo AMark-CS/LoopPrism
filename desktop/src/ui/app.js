@@ -20,7 +20,7 @@ function toast(text) {
 }
 
 /* ---------- tabs ---------- */
-const DASH_TABS = new Set(["sessions", "live"]);
+const DASH_TABS = new Set(["sessions", "cost"]);
 let route = "sessions";
 let applied = null; // route currently loaded in the iframe (keeps inner navigation when switching tabs)
 
