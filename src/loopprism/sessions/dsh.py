@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import re
 from datetime import datetime, timezone
 from typing import Any, Iterator, Optional
@@ -40,6 +41,19 @@ class ZstdUnavailable(RuntimeError):
 
 def dsh_root() -> str:
     base = os.environ.get("DSH_HOME") or os.path.join(os.path.expanduser("~"), ".dsh")
+    return os.path.join(base, "sessions")
+
+
+def desktop_root() -> str:
+    """DSH Desktop keeps its own copy of the harness (and its sessions) in its app-data folder."""
+    base = os.environ.get("DSH_DESKTOP_HOME")
+    if not base:
+        if sys.platform == "darwin":
+            base = os.path.join(os.path.expanduser("~"), "Library", "Application Support", "dsh-desktop", "harness")
+        elif sys.platform == "win32":
+            base = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "dsh-desktop", "harness")
+        else:
+            return ""
     return os.path.join(base, "sessions")
 
 

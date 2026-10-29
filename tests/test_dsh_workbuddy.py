@@ -23,6 +23,22 @@ def dsh_home(tmp_path, monkeypatch):
     return root
 
 
+class TestDshDesktop:
+    def test_sessions_of_dsh_desktop_are_read_too(self, tmp_path, monkeypatch, dsh_home):
+        from loopprism.sessions.store import SessionStore
+
+        desk = tmp_path / "desk"
+        monkeypatch.setenv("DSH_DESKTOP_HOME", str(desk))
+        d = desk / "sessions" / "--work-desktop--" / "session-desk"
+        d.mkdir(parents=True)
+        (d / "session.v4.jsonl.zstd").write_bytes(frames(dsh_rows()))
+        assert dsh.desktop_root() == str(desk / "sessions")
+        store = SessionStore(index_path=str(tmp_path / "idx.db"))
+        store.refresh(5)
+        rows = [r for r in store.list() if r["agent"] == "dsh"]
+        assert len(rows) == 2  # the CLI's and the Desktop's
+
+
 class TestDshFiles:
     def test_discover_takes_the_newest_generation_of_each_session(self, tmp_path):
         s1 = tmp_path / "p" / "s1"
