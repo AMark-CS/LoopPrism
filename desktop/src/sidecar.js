@@ -9,6 +9,9 @@ const STABLE_AFTER_MS = 60_000;
 const MAX_CONSECUTIVE_FAILURES = 5;
 const STOP_GRACE_MS = 5_000;
 
+// A route that exists in this version of the proxy. Raise it when a release adds the pages the app shows.
+const REQUIRED_PROBE = "/api/sessions/optimize/settings";
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function isHealthy(url) {
@@ -148,9 +151,16 @@ class Sidecar extends EventEmitter {
       fetchJson(`http://${HOST}:${dashboard}/api/health`),
     ]);
     // /health with a "backends" list is the proxy's signature.
-    return p?.status === "ok" && "backends" in p && d?.status === "ok"
-      ? { proxy, dashboard }
-      : null;
+    if (!(p?.status === "ok" && "backends" in p && d?.status === "ok")) return null;
+    // An older LoopPrism left running (an old app's proxy, a `lprism proxy` from before an update)
+    // serves an older dashboard that does not know the newer pages, which then show the wrong
+    // content. Only reuse one that has this version's API; otherwise start our own on free ports.
+    const current = await fetchJson(`http://${HOST}:${dashboard}${REQUIRED_PROBE}`);
+    if (!current) {
+      this.log(`an older LoopPrism is running on ${dashboard}; not using it`);
+      return null;
+    }
+    return { proxy, dashboard };
   }
 
   adopt(token, ports) {
@@ -332,4 +342,4 @@ class Sidecar extends EventEmitter {
   }
 }
 
-module.exports = { Sidecar, isLprism };
+module.exports = { Sidecar, isLprism, REQUIRED_PROBE };

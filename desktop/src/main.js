@@ -315,7 +315,12 @@ async function runTour(dir) {
   win.webContents.setZoomFactor(Number(process.env.LPRISM_TOUR_ZOOM || 1));
   await wait(2500);
   for (const tab of ["sessions", "cost", "optimize", "apps", "settings"]) {
-    showWindow(tab);
+    if (process.env.LPRISM_TOUR_CLICK) {
+      // like a user: click the sidebar button instead of sending the tab by IPC
+      await win.webContents.executeJavaScript(`document.querySelector('nav button[data-tab="${tab}"]').click()`);
+    } else {
+      showWindow(tab);
+    }
     await wait(3000);
     await shot(tab);
   }
