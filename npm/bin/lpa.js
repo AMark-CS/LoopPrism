@@ -7,6 +7,7 @@ const { atomicWrite } = require('../lib/fsutil');
 const codex = require('../lib/codex');
 const workbuddy = require('../lib/workbuddy');
 const opencode = require('../lib/opencode');
+const dsh = require('../lib/dsh');
 const { configPath } = require('../plugin/scripts/config');
 const viewer = require('../plugin/scripts/viewer');
 const { version } = require('../package.json');
@@ -14,8 +15,8 @@ const { version } = require('../package.json');
 const HELP = `lpa ${version}: LoopPrism for Claude Code and Codex
 
 Usage
-  lpa install [claude|codex|workbuddy|opencode|all] [--url <api-url>]   add the hooks (default: all that are found)
-  lpa uninstall [claude|codex|workbuddy|opencode|all]                   remove them
+  lpa install [claude|codex|workbuddy|opencode|dsh|all] [--url <api-url>]   add the hooks (default: all that are found)
+  lpa uninstall [claude|codex|workbuddy|opencode|dsh|all]                   remove them
   lpa status                                         is LoopPrism up? latest runs
   lpa open                                           open the desktop app or dashboard
 
@@ -40,6 +41,7 @@ function pick(targets) {
     codex: all || targets.includes('codex'),
     workbuddy: all || targets.includes('workbuddy'),
     opencode: all || targets.includes('opencode'),
+    dsh: all || targets.includes('dsh'),
     explicit: !all,
   };
 }
@@ -107,6 +109,15 @@ async function main(argv) {
         }
       }
     }
+    if (want.dsh) {
+      if (!dsh.available() && !want.explicit) {
+        console.log('DeepSeek Harness: not found (no ~/.dsh), skipped.');
+      } else {
+        const r = dsh.install();
+        console.log(`DeepSeek Harness: hooks file written to ${r.file}`);
+        console.log('                  In DSH Desktop, install the plugin dsh-hooks-claude-code, set its configPath to that file, and restart.');
+      }
+    }
     console.log('\nNext: start LoopPrism (desktop app, or `lprism proxy`), then use your agent. `lpa status` shows the runs.');
     return failed ? 1 : 0;
   }
@@ -116,6 +127,7 @@ async function main(argv) {
     if (want.codex) codex.uninstall();
     if (want.workbuddy && workbuddy.available()) workbuddy.uninstall();
     if (want.opencode) opencode.uninstall();
+    if (want.dsh) dsh.uninstall();
     console.log('LoopPrism hooks removed.');
     return 0;
   }

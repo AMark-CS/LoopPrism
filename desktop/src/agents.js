@@ -29,6 +29,14 @@ const AGENTS = [
     afterConnect: "Restart OpenCode so it loads the plugin.",
   },
   {
+    id: "dsh",
+    name: "DeepSeek Harness",
+    blurb:
+      "Records every prompt and tool call as a run. Writes a hooks file (~/.loopprism/dsh-hooks.json) for DeepSeek Harness's own hook plugin.",
+    afterConnect:
+      "In DSH Desktop, install the plugin dsh-hooks-claude-code, set its configPath to ~/.loopprism/dsh-hooks.json, and restart it.",
+  },
+  {
     id: "codex",
     name: "Codex",
     blurb:
@@ -38,15 +46,7 @@ const AGENTS = [
   },
 ];
 
-// Read from their own files on disk: nothing to connect, so no switch.
-const READ_ONLY = [
-  {
-    id: "dsh",
-    name: "DeepSeek Harness",
-    readOnly: true,
-    blurb: "Its sessions are read from the files DeepSeek Harness keeps on disk. Nothing to set up, and no live-run hook yet.",
-  },
-];
+const READ_ONLY = []; // every app has a switch now
 
 function agentRoot() {
   return app.isPackaged
@@ -173,7 +173,7 @@ async function lastSeen(dashboardUrl) {
       } catch {
         continue;
       }
-      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode" }[agent];
+      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode", dsh: "dsh" }[agent];
       const at = Date.parse(`${String(t.timestamp).replace(" ", "T")}Z`);
       if (key && (!seen[key] || at > seen[key])) seen[key] = at;
     }

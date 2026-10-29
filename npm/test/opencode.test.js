@@ -85,3 +85,29 @@ test('the plugin stays quiet and never throws when LoopPrism is not running', as
     delete process.env.LOOPPRISM_URL;
   }
 });
+
+test('dsh writes a hooks file the bridge can run, and uninstall keeps scripts another app uses', () => {
+  const dsh = require('../lib/dsh');
+  const codex = require('../lib/codex');
+  const { spawnSync } = require('node:child_process');
+  const home = tmp();
+  const env = {};
+  assert.equal(dsh.isInstalled({ home }), false);
+  const { file } = dsh.install({ home, env });
+  assert.equal(dsh.isInstalled({ home }), true);
+  const hooks = JSON.parse(fs.readFileSync(file, 'utf8')).hooks;
+  assert.deepEqual(Object.keys(hooks), ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop']);
+  const command = hooks.UserPromptSubmit[0].hooks[0].command;
+  assert.match(command, /--agent dsh$/);
+
+  // The command runs with a DeepSeek Harness payload on stdin and prints {}.
+  const r = spawnSync(command, { shell: true, input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', session_id: 's', prompt: 'x' }), encoding: 'utf8', env: { ...process.env, LOOPPRISM_DISABLE: '1' } });
+  assert.equal(r.stdout, '{}');
+
+  codex.install({ home, env });
+  dsh.uninstall({ home, env });
+  assert.equal(fs.existsSync(file), false);
+  assert.ok(fs.existsSync(path.join(home, '.loopprism', 'hooks', 'hook.js'))); // Codex still uses it
+  codex.uninstall({ home, env });
+  assert.equal(fs.existsSync(path.join(home, '.loopprism', 'hooks')), false);
+});
