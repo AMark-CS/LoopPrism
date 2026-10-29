@@ -20,7 +20,7 @@ function toast(text) {
 }
 
 /* ---------- tabs ---------- */
-const DASH_TABS = new Set(["sessions", "cost"]);
+const DASH_TABS = new Set(["sessions", "cost", "optimize"]);
 let route = "sessions";
 let applied = null; // route currently loaded in the iframe (keeps inner navigation when switching tabs)
 
@@ -271,6 +271,7 @@ if (lp.platform !== "darwin") {
   $("#reveal").textContent = "Show in Explorer";
   for (const el of document.querySelectorAll("[data-mac]")) el.textContent = el.dataset.win ?? el.textContent;
 }
+$("#open-optimize").onclick = () => showTab("optimize");
 $("#reveal").onclick = () => lp.revealData();
 $("#logs").onclick = () => lp.showLogs();
 $("#browser").onclick = () => state.status.dashboardUrl && lp.openExternal(state.status.dashboardUrl);

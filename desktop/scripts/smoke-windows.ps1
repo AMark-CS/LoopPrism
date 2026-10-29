@@ -161,6 +161,15 @@ try {
     Assert ($e.session.read_only -and $e.stats.steps -eq 2) "WorkBuddy session did not parse: steps=$($e.stats.steps)"
   }
 
+  Step "Optimize and Cost answer from the frozen proxy" {
+    $o = Invoke-RestMethod "$dash/api/sessions/optimize?days=90"
+    Assert ($null -ne $o.suggestions -and $o.spend_usd -ge 0) "optimize returned no analysis"
+    $c = Invoke-RestMethod "$dash/api/sessions/cost/overview?days=0"
+    Assert ($c.totals.sessions -ge 1) "cost overview has no sessions"
+    $s = Invoke-RestMethod "$dash/api/sessions/optimize/settings"
+    Assert ($s.ai.enabled -eq $false -and $s.ai.key_set -eq $false) "AI analysis should be off by default"
+  }
+
   Step "Codex hooks install, as the Apps page runs it" {
     $st = Invoke-Worker @("status")
     Assert (-not $st.error) "status error: $($st.error)"

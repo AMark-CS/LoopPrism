@@ -20,6 +20,11 @@ export const useCostOverview = (days: number, agent?: string) =>
     placeholderData: (prev) => prev,
   });
 
+export const useOptimize = (days: number, agent?: string) =>
+  useQuery({ queryKey: ['optimize', days, agent ?? ''], queryFn: () => api.optimize(days, agent), refetchInterval: 60000, placeholderData: (prev) => prev });
+
+export const useOptimizeTools = () => useQuery({ queryKey: ['optimize-tools'], queryFn: () => api.optimizeTools(), staleTime: 3600000 });
+
 export const useSession = (id: string | null) =>
   useQuery({
     queryKey: ['session', id],

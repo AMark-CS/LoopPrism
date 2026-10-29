@@ -89,7 +89,7 @@ async def cost_overview(request: Request, days: int = Query(30, ge=0, le=3650), 
 
 
 @router.get("/optimize")
-async def optimize(request: Request, days: int = Query(30, ge=1, le=365), agent: Optional[str] = None):
+async def optimize(request: Request, days: int = Query(30, ge=1, le=3650), agent: Optional[str] = None):
     """Suggestions for spending less, with the estimated saving of each and what adopting them did."""
     from datetime import datetime, timedelta, timezone
 
@@ -107,6 +107,70 @@ async def optimize(request: Request, days: int = Query(30, ge=1, le=365), agent:
     result["days"] = days
     result["pending"] = store.pending
     return result
+
+
+@router.get("/optimize/tools")
+async def optimize_tools(refresh: bool = False):
+    """Tools that save tokens or money (reviewed catalog plus GitHub search), for the suggestions."""
+    from ..optimize import config as oc, tools
+
+    return await asyncio.to_thread(tools.tools_for, oc.load()["live_tools"], refresh)
+
+
+@router.get("/optimize/settings")
+async def optimize_settings():
+    from ..optimize import config as oc
+
+    return oc.public(oc.load())
+
+
+@router.put("/optimize/settings")
+async def optimize_save_settings(request: Request):
+    from ..optimize import config as oc
+
+    try:
+        body = await request.json()
+        return oc.public(oc.save(body if isinstance(body, dict) else {}))
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+
+
+async def _overview_and_result(request: Request, days: int, agent: Optional[str]):
+    from datetime import datetime, timedelta, timezone
+
+    from ..optimize import analyze
+
+    store = get_store(request)
+    await asyncio.to_thread(store.refresh, 5.0)
+    since = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    overview = store.cost_overview(since, agent)
+    rows = await asyncio.to_thread(store.costliest, since, agent)
+    result = await asyncio.to_thread(analyze, rows, store.load, overview["totals"]["cost"] or 0.0)
+    result["days"] = days
+    return overview, result
+
+
+@router.post("/optimize/ai/{step}")
+async def optimize_ai(step: str, request: Request, days: int = Query(30, ge=1, le=3650), agent: Optional[str] = None,
+                      language: str = "en"):
+    """``preview`` returns exactly what would be sent; ``run`` sends it (only after the user confirmed)."""
+    from ..optimize import ai, config as oc
+
+    if step not in ("preview", "run"):
+        raise HTTPException(status_code=404, detail="Unknown step")
+    cfg = oc.load()
+    overview, result = await _overview_and_result(request, days, agent)
+    messages = ai.build_messages(overview, result, language)
+    if step == "preview":
+        return {"endpoint": ai.endpoint(cfg["ai"]["url"]) if cfg["ai"]["url"] else None, "model": cfg["ai"]["model"], "messages": messages,
+                "ready": bool(cfg["ai"]["enabled"])}
+    if not cfg["ai"]["enabled"]:
+        raise HTTPException(status_code=400, detail="AI analysis is turned off in the Optimize settings")
+    try:
+        text = await asyncio.to_thread(ai.run, cfg, messages)
+    except Exception as err:  # the endpoint's answer, never the key
+        raise HTTPException(status_code=502, detail=str(err).replace(cfg["ai"]["api_key"], "***"))
+    return {"text": text}
 
 
 @router.post("/optimize/{rule}/{action}")

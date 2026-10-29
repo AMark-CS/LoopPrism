@@ -126,3 +126,166 @@ class TestAdoption:
         assert store.adoptions.dismiss("repeated_calls")["state"] == "dismissed"
         store.adoptions.reset("repeated_calls")
         assert store.adoptions.states() == {}
+
+
+# ------------------------------------------------------------ tools, settings, AI
+class TestTools:
+    def repo(self, name, lic="MIT", days=10, archived=False, stars=900):
+        from datetime import datetime, timedelta, timezone
+
+        pushed = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        return {"full_name": name, "html_url": f"https://github.com/{name}", "stargazers_count": stars,
+                "license": {"spdx_id": lic} if lic else None, "pushed_at": pushed, "description": "d", "archived": archived}
+
+    def test_only_permissive_recent_unarchived_projects_are_listed(self):
+        from loopprism.optimize.tools import _entry, acceptable
+
+        ok = lambda **kw: acceptable(_entry(self.repo("a/b", **kw)))  # noqa: E731
+        assert ok()
+        assert not ok(lic="GPL-3.0-only") and not ok(lic=None) and not ok(lic="NOASSERTION")
+        assert not ok(days=400) and not ok(archived=True)
+
+    def test_fetch_uses_the_catalog_then_search_and_skips_bad_ones(self):
+        import httpx
+
+        from loopprism.optimize import tools
+
+        def handler(req: httpx.Request) -> httpx.Response:
+            if req.url.path.startswith("/repos/"):
+                name = req.url.path.removeprefix("/repos/")
+                return httpx.Response(404) if name == "microsoft/LLMLingua" else httpx.Response(200, json=self.repo(name))
+            return httpx.Response(200, json={"items": [
+                self.repo("x/awesome-claude"), self.repo("x/old", days=999), self.repo("x/gpl", lic="GPL-3.0-only"),
+                self.repo("x/good"), self.repo("rtk-ai/rtk")]})  # a catalog repo is not "discovered" again
+
+        found = tools.fetch(httpx.Client(transport=httpx.MockTransport(handler)))
+        names = [t["repo"] for t in found]
+        assert "microsoft/LLMLingua" not in names  # 404: skipped
+        assert names.count("rtk-ai/rtk") == 1 and "x/good" in names
+        assert not {"x/awesome-claude", "x/old", "x/gpl"} & set(names)
+        assert next(t for t in found if t["repo"] == "x/good")["reviewed"] is False
+
+    def test_the_day_cache_offline_and_the_off_switch(self, tmp_path, monkeypatch):
+        from loopprism.optimize import tools
+
+        monkeypatch.setenv("LOOPPRISM_TOOLS_CACHE", str(tmp_path / "c.json"))
+        entry = {"repo": "a/b", "url": "u", "stars": 1, "license": "MIT", "pushed_days_ago": 1, "description": "", "archived": False,
+                 "tags": ["x"], "kind": "k", "why": "w", "reviewed": True}
+        calls = []
+        r = tools.tools_for(True, fetcher=lambda: calls.append(1) or [entry])
+        assert (r["source"], len(calls)) == ("live", 1)
+        assert tools.tools_for(True, fetcher=lambda: calls.append(1) or [])["source"] == "cache" and len(calls) == 1  # once a day
+        assert tools.tools_for(True, force=True, fetcher=lambda: calls.append(1) or [])["source"] == "cache"  # offline: last good answer
+        monkeypatch.setenv("LOOPPRISM_TOOLS_CACHE", str(tmp_path / "none.json"))
+        assert tools.tools_for(False)["source"] == "off"
+        offline = tools.tools_for(True, fetcher=lambda: (_ for _ in ()).throw(OSError("offline")))
+        assert offline["source"] == "offline" and offline["tools"][0]["reviewed"]  # the reviewed catalog still shows
+
+
+class TestSettingsAndAi:
+    @pytest.fixture(autouse=True)
+    def cfg(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("LOOPPRISM_OPTIMIZE_FILE", str(tmp_path / "o.json"))
+
+    def test_the_key_is_stored_privately_and_never_shown(self, tmp_path):
+        import json
+        import os
+        import sys
+
+        from loopprism.optimize import config as oc
+
+        oc.save({"ai": {"url": "https://api.example.com/v1", "model": "m", "api_key": "sk-secret"}})
+        assert "sk-secret" not in json.dumps(oc.public(oc.load())) and oc.public(oc.load())["ai"]["key_set"] is True
+        if sys.platform != "win32":
+            assert os.stat(tmp_path / "o.json").st_mode & 0o777 == 0o600
+        oc.save({"ai": {"model": "m2"}})  # an empty key keeps the stored one
+        assert oc.load()["ai"]["api_key"] == "sk-secret"
+        oc.save({"ai": {"clear_key": True}})
+        assert oc.load()["ai"]["api_key"] == ""
+
+    def test_validation(self):
+        from loopprism.optimize import config as oc
+
+        with pytest.raises(ValueError):
+            oc.save({"ai": {"url": "http://evil.example.com/v1"}})  # plain http only for this computer
+        oc.save({"ai": {"url": "http://localhost:11434/v1"}})
+        with pytest.raises(ValueError):
+            oc.save({"ai": {"enabled": True}})  # needs url, model and key
+
+    def test_the_request_carries_only_aggregates(self):
+        from loopprism.optimize import ai
+
+        overview = {"totals": {"steps": 10, "input": 1, "cache_read": 2, "output": 3},
+                    "by_model": [{"key": "glm-5.1", "cost": 1.5, "steps": 10}], "by_agent": [{"key": "opencode", "cost": 1.5}]}
+        result = {"days": 30, "spend_usd": 1.5, "saving_usd": 0.4, "saving_pct": 26.7, "suggestions": [
+            {"id": "low_cache_hit", "saving_usd": 0.4, "sessions": 1, "confidence": "medium",
+             "evidence": [{"session_id": "ses_secret", "title": "My private project", "detail": "glm-5.1: 0% cached"}]}]}
+        text = " ".join(m["content"] for m in ai.build_messages(overview, result))
+        assert "glm-5.1: 0% cached" in text and "low_cache_hit" in text
+        assert "ses_secret" not in text and "private project" not in text
+        assert ai.endpoint("https://x/v1/") == "https://x/v1/chat/completions" == ai.endpoint("https://x/v1/chat/completions")
+
+    def test_run_posts_to_the_endpoint_with_the_key(self, monkeypatch):
+        import httpx
+
+        from loopprism.optimize import ai
+
+        seen = {}
+
+        def fake_post(url, headers, json, timeout, follow_redirects):
+            seen.update(url=url, auth=headers["Authorization"], model=json["model"])
+            return httpx.Response(200, json={"choices": [{"message": {"content": " Do X. "}}]}, request=httpx.Request("POST", url))
+
+        monkeypatch.setattr(ai.httpx, "post", fake_post)
+        cfg = {"ai": {"url": "https://x/v1", "api_key": "k", "model": "m"}}
+        assert ai.run(cfg, [{"role": "user", "content": "hi"}]) == "Do X."
+        assert seen == {"url": "https://x/v1/chat/completions", "auth": "Bearer k", "model": "m"}
+        monkeypatch.setattr(ai.httpx, "post", lambda *a, **k: httpx.Response(401, text="no", request=httpx.Request("POST", "https://x")))
+        with pytest.raises(RuntimeError, match="401"):
+            ai.run(cfg, [])
+
+
+class TestApi:
+    @pytest.fixture
+    async def api(self, collector, tmp_path, monkeypatch):
+        from httpx import ASGITransport, AsyncClient
+
+        from loopprism.api.app import create_app
+        from tests.support_other_agents import write, write_opencode
+
+        monkeypatch.setenv("LOOPPRISM_OPTIMIZE_FILE", str(tmp_path / "o.json"))
+        monkeypatch.setenv("LOOPPRISM_TOOLS_CACHE", str(tmp_path / "t.json"))
+        monkeypatch.setenv("DSH_HOME", str(tmp_path / ".dsh"))
+        monkeypatch.setenv("WORKBUDDY_CONFIG_DIR", str(tmp_path / ".workbuddy"))
+        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path))
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "no"))
+        monkeypatch.setenv("CODEX_HOME", str(tmp_path / "no"))
+        write(str(tmp_path))
+        write_opencode(str(tmp_path))
+        app = create_app(collector=collector, dashboard_enabled=False)
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as c:
+            yield c
+
+    @pytest.mark.asyncio
+    async def test_analysis_adoption_settings_and_ai_gate(self, api):
+        r = await api.get("/api/sessions/optimize", params={"days": 3650})
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert set(d) >= {"spend_usd", "saving_usd", "optimized_usd", "saving_pct", "suggestions", "analyzed_sessions"}
+        assert d["optimized_usd"] <= d["spend_usd"]
+        assert (await api.post("/api/sessions/optimize/nope/adopt")).status_code == 404
+        assert (await api.post("/api/sessions/optimize/low_cache_hit/adopt")).json()["state"] == "adopted"
+        assert (await api.post("/api/sessions/optimize/low_cache_hit/bogus")).status_code == 400
+        assert (await api.post("/api/sessions/optimize/low_cache_hit/reset")).json() == {"state": None}
+
+        s = (await api.get("/api/sessions/optimize/settings")).json()
+        assert s["ai"] == {"enabled": False, "url": "", "model": "", "key_set": False} and s["live_tools"] is True
+        bad = await api.put("/api/sessions/optimize/settings", json={"ai": {"url": "http://evil.example.com"}})
+        assert bad.status_code == 400
+        ok = await api.put("/api/sessions/optimize/settings", json={"ai": {"url": "https://api.example.com/v1", "model": "m", "api_key": "sk-1"}})
+        assert ok.json()["ai"]["key_set"] is True and "sk-1" not in ok.text
+        # preview works and never contains the key; run is refused while AI is off
+        pv = (await api.post("/api/sessions/optimize/ai/preview", params={"days": 3650})).json()
+        assert pv["ready"] is False and "sk-1" not in str(pv) and pv["messages"][0]["role"] == "system"
+        assert (await api.post("/api/sessions/optimize/ai/run", params={"days": 3650})).status_code == 400
+        assert (await api.post("/api/sessions/optimize/ai/other")).status_code == 404

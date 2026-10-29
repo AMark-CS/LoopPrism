@@ -250,3 +250,66 @@ export interface CostOverview {
   top_sessions: { id: string; agent: AgentId; title: string; project: string | null; started_at: string | null; cost: number }[];
   unpriced_models: string[];
 }
+
+export interface AdoptionMetrics {
+  start: string;
+  end: string;
+  active_days: number;
+  steps: number;
+  spend_usd: number;
+  cost_per_call: number | null;
+  cache_hit_pct: number | null;
+}
+
+export interface Adoption {
+  state: 'adopted' | 'dismissed';
+  at: string;
+  days_since?: number;
+  before?: AdoptionMetrics;
+  after?: AdoptionMetrics;
+  verdict?: 'waiting' | 'unknown' | 'better' | 'same' | 'worse';
+  cost_per_call_change_pct?: number;
+  note?: string;
+}
+
+export interface Suggestion {
+  id: string;
+  title: string;
+  how: string;
+  tags: string[];
+  confidence: 'high' | 'medium' | 'low';
+  saving_usd: number;
+  saving_pct: number;
+  sessions: number;
+  evidence: { session_id: string; title: string | null; agent: AgentId | null; detail: string; saving_usd: number }[];
+  adoption: Adoption | null;
+}
+
+export interface OptimizeResult {
+  days: number;
+  pending: number;
+  spend_usd: number;
+  saving_usd: number;
+  optimized_usd: number;
+  saving_pct: number;
+  analyzed_sessions: number;
+  suggestions: Suggestion[];
+}
+
+export interface ToolRec {
+  repo: string;
+  url: string;
+  stars: number | null;
+  license: string | null;
+  pushed_days_ago: number | null;
+  description: string;
+  tags: string[];
+  kind: string;
+  why: string;
+  reviewed: boolean;
+}
+
+export interface OptimizeSettings {
+  live_tools: boolean;
+  ai: { enabled: boolean; url: string; model: string; key_set: boolean };
+}

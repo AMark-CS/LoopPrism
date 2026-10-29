@@ -104,6 +104,16 @@
   </tr>
   <tr>
     <td colspan="2" valign="top">
+      <h4>⚡ Optimize</h4>
+      Finds where you spend more than you need to (low cache hits, a big model on a simple task,
+      repeated calls, huge tool outputs, endless sessions), estimates the saving of each, and shows
+      the total as a percentage of your spend. Mark a suggestion as adopted and LoopPrism compares
+      your cost per call before and after. It also points to open-source tools that help, found on
+      GitHub. Optional AI analysis uses a model and API key of your own choice.
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top">
       <h4>🤖 Agents</h4>
       A session that spawns subagents gets a flow view: the main agent as a line, each subagent
       branching off and merging back, with what it was asked, what it returned, its cost, and how
