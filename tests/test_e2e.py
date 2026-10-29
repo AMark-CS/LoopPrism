@@ -249,7 +249,7 @@ def run_hook(api_url, payload, agent, tmp_path):
         capture_output=True,
         text=True,
         timeout=15,
-        env={**os.environ, "LOOPPRISM_URL": api_url, "TMPDIR": str(tmp_path)},
+        env={**os.environ, "LOOPPRISM_URL": api_url, "TMPDIR": str(tmp_path), "TEMP": str(tmp_path), "TMP": str(tmp_path)},
     )
     assert (r.returncode, r.stdout) == (0, "{}"), r.stderr
     return r
