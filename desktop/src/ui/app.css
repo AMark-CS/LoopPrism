@@ -63,6 +63,11 @@
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* Thin scrollbars like the dashboard's, so Windows doesn't show its wide classic ones (macOS overlays them). */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 body { margin: 0; height: 100vh; display: flex; background: var(--bg); color: var(--text); overflow: hidden; }
 button, input { font: inherit; color: inherit; }
 .drag { -webkit-app-region: drag; height: 40px; }
