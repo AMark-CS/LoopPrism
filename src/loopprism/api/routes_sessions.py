@@ -69,7 +69,7 @@ async def list_sessions(
     store = get_store(request)
     progress = await asyncio.to_thread(store.refresh, 1.5)
     rows = await asyncio.to_thread(store.list, agent, q, project, limit, offset)
-    return {"sessions": rows, "total": store.count(), "pending": progress["pending"]}
+    return {"sessions": rows, "total": store.count(agent), "by_agent": store.counts_by_agent(), "pending": progress["pending"]}
 
 
 @router.get("/cost/overview")

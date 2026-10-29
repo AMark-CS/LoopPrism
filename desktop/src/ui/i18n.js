@@ -28,8 +28,8 @@
     "LoopPrism turned on monitoring for the apps it found on this PC. Switch off any you don't want.":
       "LoopPrism 已为在这台电脑上找到的应用开启监控,不需要的可以关掉。",
     "Got it": "知道了",
-    "Claude Code, Codex, WorkBuddy, DeepSeek Harness and OpenCode sessions are also read from disk, with nothing to set up, and appear under Sessions. DeepSeek Harness has no live-run hook yet.":
-      "Claude Code、Codex、WorkBuddy、DeepSeek Harness 和 OpenCode 的会话也会直接从磁盘读取,无需设置,显示在“会话”中。DeepSeek Harness 暂无实时钩子。",
+    "The sessions of all five apps are read from disk and appear under Sessions, whether or not monitoring is switched on. The switch adds live runs.":
+      "五个应用的会话都会直接从磁盘读取并显示在“会话”中,无论是否开启监控。开关用于额外记录实时运行。",
     "Other MCP clients": "其他 MCP 客户端",
     "Any client that talks to MCP servers over HTTP can be recorded by pointing it at the proxy instead of the server.":
       "任何通过 HTTP 连接 MCP 服务器的客户端,只要指向代理而不是服务器,就能被记录。",
@@ -71,6 +71,10 @@
     "Not found": "未找到",
     "Send to this app": "发送到本应用",
     "just now": "刚刚",
+    "Read from disk": "从磁盘读取",
+    "{n} sessions": "{n} 个会话",
+    "Its sessions are read from OpenCode's own database (~/.local/share/opencode). Nothing to set up.": "它的会话直接从 OpenCode 自己的数据库(~/.local/share/opencode)读取,无需设置。",
+    "Its sessions are read from the files DeepSeek Harness keeps on disk. Nothing to set up, and no live-run hook yet.": "它的会话直接从 DeepSeek Harness 保存在磁盘上的文件读取,无需设置,暂无实时钩子。",
     "{n} min ago": "{n} 分钟前",
     "{n} h ago": "{n} 小时前",
     "{n} d ago": "{n} 天前",

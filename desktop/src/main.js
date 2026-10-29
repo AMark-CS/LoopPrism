@@ -65,6 +65,17 @@ function trayIcon() {
   return img;
 }
 
+/** Sessions on disk per agent, from the dashboard's own index. */
+async function sessionCounts(base) {
+  if (!base) return {};
+  try {
+    const res = await fetch(`${base}/api/sessions?limit=1`, { signal: AbortSignal.timeout(3000) });
+    return (await res.json()).by_agent || {};
+  } catch {
+    return {};
+  }
+}
+
 function updateTray() {
   if (!tray) return;
   const lang = resolveLang(settings.get("language"), app.getLocale());
@@ -196,9 +207,10 @@ function registerIpc() {
       agents.lastSeen(status.dashboardUrl),
     ]);
     if (st.error) return { error: st.error };
+    const counts = await sessionCounts(status.dashboardUrl);
     return {
       hooks: agents.hookTarget(status.dashboardUrl),
-      agents: agents.AGENTS.map((a) => {
+      agents: [...agents.AGENTS, ...agents.READ_ONLY].map((a) => {
         const s = st[a.id] || {};
         const noCli = a.id === "claude" && s.found && !s.cli;
         return {
@@ -207,6 +219,7 @@ function registerIpc() {
           connected: Boolean(s.connected),
           canToggle: s.connected || (s.found && !noCli),
           lastSeen: seen[a.id] || null,
+          sessions: counts[a.sessionAgent || a.id] ?? 0,
           error: s.error || (noCli ? "The claude command was not found, so the plugin can't be installed from here." : undefined),
         };
       }),

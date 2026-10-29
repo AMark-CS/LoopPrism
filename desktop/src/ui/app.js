@@ -114,7 +114,9 @@ function renderAgents() {
     toggle.disabled = a.busy || !a.canToggle;
     toggle.onchange = () => setAgent(a, toggle.checked);
 
-    const pill = a.busy
+    const pill = a.readOnly
+      ? el("span", { className: "pill", textContent: t("Read from disk") })
+      : a.busy
       ? el("span", { className: "pill", textContent: t("Working…") })
       : a.connected
         ? el("span", {
@@ -130,6 +132,7 @@ function renderAgents() {
       { className: "info" },
       el("div", { className: "title" }, a.name, pill),
       el("div", { className: "desc", textContent: t(a.blurb) }),
+      el("div", { className: "sessions-count", textContent: t("{n} sessions", { n: a.sessions ?? 0 }) }),
     );
     if (a.error) info.append(el("div", { className: "note err", textContent: a.error }));
     else if (a.connected && !hooks.matches) {
@@ -149,7 +152,7 @@ function renderAgents() {
     }
     else if (a.hint) info.append(el("div", { className: "note", textContent: t(a.hint) }));
 
-    list.append(el("div", { className: "card agent" }, info, toggle));
+    list.append(el("div", { className: "card agent" }, ...(a.readOnly ? [info] : [info, toggle])));
   }
 }
 

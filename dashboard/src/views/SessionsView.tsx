@@ -21,9 +21,9 @@ const AGENT_LABEL: Record<string, string> = {
   workbuddy: 'WorkBuddy',
   opencode: 'OpenCode',
 };
-const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error'> = {
-  'claude-code': 'muted',
-  codex: 'primary',
+const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error' | 'violet'> = {
+  'claude-code': 'primary',
+  codex: 'violet',
   dsh: 'ok',
   workbuddy: 'warn',
   opencode: 'error',

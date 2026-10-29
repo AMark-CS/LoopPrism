@@ -172,3 +172,4 @@ button.ghost:hover { border-color: var(--line-strong); }
 .update-sub { font-size: 11px; color: var(--muted); }
 .update-sub.bad { color: var(--err); }
 .update-sub a { color: var(--accent2); cursor: pointer; }
+.agent .sessions-count { color: var(--muted); margin-top: 2px; font-size: 11px; }
