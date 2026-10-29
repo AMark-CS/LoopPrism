@@ -9,8 +9,7 @@ menu bar (macOS) or system tray (Windows).
 
 ### Windows (x64)
 
-1. Download `LoopPrism-<version>-x64.exe` from the [Releases](https://github.com/AMark-CS/LoopPrism/releases) page (the
-   pre-release named "LoopPrism for Windows", tagged `desktop-win-v*`) and run it.
+1. Download `LoopPrism-<version>-x64.exe` from the [Releases](https://github.com/AMark-CS/LoopPrism/releases/latest) page and run it.
    The installer is a short wizard: you can choose the **install folder**, and whether to install for just
    you (the default, no administrator prompt) or for all users of the PC. LoopPrism starts when it finishes.
    For a scripted install, `LoopPrism-<version>-x64.exe /S /D=C:\Tools\LoopPrism` installs silently into
@@ -122,10 +121,10 @@ runners and x64 on a Windows runner (the sidecar must be frozen per architecture
 per OS), and attaches the `.dmg`, `.zip` and `.exe` files to a GitHub Release. It can also be run manually
 (`workflow_dispatch`) to produce artifacts without a release.
 
-The Windows preview is published by `.github/workflows/release-windows-preview.yml` when a tag
-`desktop-win-v<version>` (matching `desktop/package.json`) is pushed. It builds the installer, runs
-`scripts/smoke-windows.ps1` against the installed app, and creates a GitHub *pre-release*. The tag is
-not `desktop-v*`, so the macOS release workflow and every app's updater ignore it.
+Before the Windows installer is attached, the same job installs it and drives the installed app
+with `scripts/smoke-windows.ps1` (launch, dashboard, hooks, the in-place update, uninstall), so a tag
+cannot publish a Windows build that does not work. The same smoke test runs on pull requests that
+touch the desktop app (`.github/workflows/windows-smoke.yml`).
 
 Locally on Windows: `cd desktop && npm ci && npm run dist` (with `PYTHON` pointing at a Python that
 has `pip install . pyinstaller`) produces `release/LoopPrism-<version>-x64.exe`.

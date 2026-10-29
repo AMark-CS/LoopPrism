@@ -100,4 +100,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "LoopPrism Desktop ${TAG#desktop-v}" \
             --generate-notes \
-            --notes "Unsigned builds. macOS: right-click the app → Open on first launch, or run \`xattr -dr com.apple.quarantine /Applications/LoopPrism.app\`. Windows: run the .exe; if SmartScreen warns, choose More info → Run anyway. See desktop/README.md."
+            --notes "Unsigned builds. macOS: right-click the app → Open on first launch, or run \`xattr -dr com.apple.quarantine /Applications/LoopPrism.app\`. Windows (x64): run the .exe, choose where to install, and if SmartScreen warns choose More info → Run anyway; the installer was installed, launched and updated on a Windows runner before this release was created. See desktop/README.md."
