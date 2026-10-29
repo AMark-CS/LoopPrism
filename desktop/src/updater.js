@@ -95,6 +95,28 @@ async function fetchLatest({ fetchImpl, apiUrl = DEFAULT_API, current, arch, pla
 
 /* ---------- download, stage, swap ---------- */
 
+/** Remove a file if possible: a locked one (EBUSY) must not turn into a second error that hides the first. */
+function rmQuiet(file) {
+  try {
+    fs.rmSync(file, { force: true });
+  } catch {
+    /* left behind; the next download picks another name */
+  }
+}
+
+const LOCKED = new Set(["EBUSY", "EPERM", "EACCES", "UNKNOWN"]);
+
+/** ``dest``, or a new name next to it when an old file of that name is there and cannot be removed (locked). */
+function freshPath(dest) {
+  try {
+    fs.rmSync(dest, { force: true });
+    return dest;
+  } catch {
+    const { dir, name, ext } = path.parse(dest);
+    return path.join(dir, `${name}-${Date.now()}${ext}`);
+  }
+}
+
 async function downloadAsset({ fetchImpl, asset, dest, onProgress, trusted = isTrustedDownload }) {
   if (!trusted(asset.url)) throw new Error("The download address is not on this project's GitHub releases");
   const res = await fetchImpl(asset.url, { headers: { "user-agent": "LoopPrism-desktop" } });
@@ -104,6 +126,11 @@ async function downloadAsset({ fetchImpl, asset, dest, onProgress, trusted = isT
   const out = fs.createWriteStream(dest);
   let got = 0;
   try {
+    // A locked target (a half-finished earlier update, a virus scanner) fails here, not on the first write.
+    await new Promise((resolve, reject) => {
+      out.once("open", resolve);
+      out.once("error", reject);
+    });
     for await (const chunk of Readable.fromWeb(res.body)) {
       hash.update(chunk);
       got += chunk.length;
@@ -113,16 +140,16 @@ async function downloadAsset({ fetchImpl, asset, dest, onProgress, trusted = isT
     await new Promise((resolve, reject) => out.end((err) => (err ? reject(err) : resolve())));
   } catch (err) {
     out.destroy();
-    fs.rmSync(dest, { force: true });
+    rmQuiet(dest);
     throw err;
   }
   const digest = hash.digest("hex");
   if (asset.size && got !== asset.size) {
-    fs.rmSync(dest, { force: true });
+    rmQuiet(dest);
     throw new Error("The download is incomplete");
   }
   if (asset.sha256 && digest !== asset.sha256) {
-    fs.rmSync(dest, { force: true });
+    rmQuiet(dest);
     throw new Error("The download does not match its checksum");
   }
   return { bytes: got, sha256: digest };
@@ -295,13 +322,21 @@ class Updater extends EventEmitter {
       return this.state;
     }
     const auto = this.canAutoInstall();
-    const dest = path.join(auto ? this.o.tmpDir : this.o.downloadsDir, info.asset.name);
+    let dest = freshPath(path.join(auto ? this.o.tmpDir : this.o.downloadsDir, info.asset.name));
     try {
       this.set({ phase: "downloading", percent: 0, error: null });
-      await downloadAsset({
+      const download = () => downloadAsset({
         fetchImpl: this.o.fetchImpl, asset: info.asset, dest, trusted: this.o.trusted,
         onProgress: (p) => p !== null && p !== this.state.percent && this.set({ percent: p }),
       });
+      try {
+        await download();
+      } catch (err) {
+        if (!LOCKED.has(err?.code)) throw err;
+        const { dir, name, ext } = path.parse(dest); // locked: try again under a name nobody holds
+        dest = path.join(dir, `${name}-${Date.now()}${ext}`);
+        await download();
+      }
       if (!auto) {
         await this.o.openPath(dest);
         this.set({ phase: "downloaded", percent: 100, file: dest });
@@ -311,8 +346,21 @@ class Updater extends EventEmitter {
       if (this.o.platform === "win32") {
         // Per-user NSIS, silent. `--updated` marks it as an update and `--force-run`
         // starts the new version afterwards (the same flags electron-updater uses).
-        const child = this.o.spawnImpl(dest, windowsInstallerArgs(), { detached: true, stdio: "ignore" });
-        child.unref();
+        // A virus scanner often holds a fresh .exe for a moment: retry while it is locked.
+        for (let attempt = 1; ; attempt++) {
+          const child = this.o.spawnImpl(dest, windowsInstallerArgs(), { detached: true, stdio: "ignore" });
+          const failure = await new Promise((resolve) => {
+            if (typeof child.once !== "function") return resolve(null);
+            child.once("error", resolve);
+            child.once("spawn", () => resolve(null));
+          });
+          if (!failure) {
+            child.unref();
+            break;
+          }
+          if (!LOCKED.has(failure.code) || attempt >= 5) throw failure;
+          await new Promise((r) => setTimeout(r, 1000));
+        }
         this.o.quit();
         return this.state;
       }
@@ -320,7 +368,7 @@ class Updater extends EventEmitter {
       const stageDir = path.join(path.dirname(target), `.LoopPrism-update-${info.latest}`);
       const mountDir = path.join(this.o.tmpDir, `loopprism-update-mount-${process.pid}`);
       const staged = await stageApp({ dmg: dest, stageDir, mountDir, runImpl: this.o.runImpl });
-      fs.rmSync(dest, { force: true });
+      rmQuiet(dest);
       const script = path.join(this.o.tmpDir, `loopprism-update-${info.latest}.sh`);
       fs.writeFileSync(script, installerScript({
         pid: this.o.pid, target, staged, stageDir, log: path.join(this.o.tmpDir, "loopprism-update.log"),
@@ -329,7 +377,7 @@ class Updater extends EventEmitter {
       child.unref();
       this.o.quit();
     } catch (err) {
-      fs.rmSync(dest, { force: true });
+      rmQuiet(dest);
       this.set({ phase: "error", error: err.message, percent: null });
     }
     return this.state;
@@ -339,5 +387,5 @@ class Updater extends EventEmitter {
 module.exports = {
   REPO, TAG_PREFIX, DEFAULT_API,
   parseVersion, compareVersions, pickLatest, pickAsset, isTrustedDownload, fetchLatest,
-  downloadAsset, stageApp, installerScript, windowsInstallerArgs, Updater,
+  downloadAsset, freshPath, stageApp, installerScript, windowsInstallerArgs, Updater,
 };

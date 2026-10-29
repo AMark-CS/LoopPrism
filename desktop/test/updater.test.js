@@ -396,3 +396,56 @@ test("a cached update disappears once the app is that version, and failed checks
   await up.checkIfDue();
   assert.equal(stored, null); // a failure is not remembered, so the next tick retries
 });
+
+test("Windows: an installer a virus scanner still holds (EBUSY on start) is retried, then run", async () => {
+  const { EventEmitter } = require("node:events");
+  const root = tmp();
+  const exe = path.join(root, "LoopPrism.exe");
+  fs.writeFileSync(exe, "old");
+  let tries = 0;
+  const { up, calls, close } = await updaterWith({
+    platform: "win32", arch: "x64", bundle: exe,
+    spawnImpl: () => {
+      tries++;
+      const child = new EventEmitter();
+      child.unref = () => {};
+      setImmediate(() => (tries < 3 ? child.emit("error", Object.assign(new Error("EBUSY: resource busy or locked"), { code: "EBUSY" })) : child.emit("spawn")));
+      return child;
+    },
+  });
+  await up.check();
+  await up.install();
+  assert.equal(tries, 3);
+  assert.equal(calls.quit, 1);
+  close();
+});
+
+test("Windows: a failure to start the installer is reported, the app stays open, and cleanup of a locked file does not hide it", async () => {
+  const { EventEmitter } = require("node:events");
+  const root = tmp();
+  const exe = path.join(root, "LoopPrism.exe");
+  fs.writeFileSync(exe, "old");
+  const { up, calls, close } = await updaterWith({
+    platform: "win32", arch: "x64", bundle: exe,
+    spawnImpl: () => {
+      const child = new EventEmitter();
+      setImmediate(() => child.emit("error", Object.assign(new Error("spawn failed"), { code: "ENOENT" })));
+      return child;
+    },
+  });
+  await up.check();
+  await up.install();
+  assert.equal(up.state.phase, "error");
+  assert.match(up.state.error, /spawn failed/);
+  assert.equal(calls.quit, 0);
+  close();
+});
+
+test("a download target that cannot be removed gets another name", () => {
+  const dir = tmp();
+  const target = path.join(dir, "LoopPrism-0.2.1-x64.exe");
+  fs.mkdirSync(target); // rm of a directory without `recursive` fails, like a locked file does
+  const fresh = u.freshPath(target);
+  assert.notEqual(fresh, target);
+  assert.match(path.basename(fresh), /^LoopPrism-0\.2\.1-x64-\d+\.exe$/);
+});
