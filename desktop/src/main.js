@@ -55,7 +55,7 @@ const STATUS_LABEL = {
 
 function trayIcon() {
   // macOS wants a monochrome "template" image that follows the menu bar's
-  // light/dark; Windows and Linux trays show a regular colour icon.
+  // light/dark; the Windows tray shows a regular colour icon.
   const mac = process.platform === "darwin";
   const img = nativeImage.createFromPath(
     path.join(__dirname, "..", "assets", mac ? "trayTemplate.png" : "tray.png"),
@@ -259,7 +259,7 @@ app.whenReady().then(async () => {
   // The Theme setting ("dark" | "light" | "system") drives Electron's nativeTheme: the window's
   // title bar and scrollbars, and `prefers-color-scheme` for the app UI and the embedded dashboard.
   nativeTheme.themeSource = settings.get("theme");
-  // Windows and Linux would show a default File/Edit/View menu bar above the UI.
+  // Windows would show a default File/Edit/View menu bar above the UI.
   if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   sidecar = new Sidecar({
     binary: sidecarBinary(),
@@ -274,7 +274,7 @@ app.whenReady().then(async () => {
   registerIpc();
 
   tray = new Tray(trayIcon());
-  // Windows/Linux trays open the app on a click; macOS shows the menu.
+  // The Windows tray opens the app on a click; macOS shows the menu.
   if (process.platform !== "darwin") tray.on("click", () => showWindow());
   updateTray();
   startUpdater();

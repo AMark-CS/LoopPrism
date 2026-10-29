@@ -268,8 +268,8 @@ $("#login").onchange = async (e) => {
 };
 document.body.classList.add(`os-${lp.platform}`);
 if (lp.platform !== "darwin") {
-  $("#reveal").textContent = lp.platform === "win32" ? "Show in Explorer" : "Show in folder";
-  for (const el of document.querySelectorAll("[data-mac]")) el.textContent = el.dataset[lp.platform === "win32" ? "win" : "other"] ?? el.textContent;
+  $("#reveal").textContent = "Show in Explorer";
+  for (const el of document.querySelectorAll("[data-mac]")) el.textContent = el.dataset.win ?? el.textContent;
 }
 $("#reveal").onclick = () => lp.revealData();
 $("#logs").onclick = () => lp.showLogs();

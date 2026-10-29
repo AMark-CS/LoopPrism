@@ -77,7 +77,9 @@ def trash(path: str, allowed_roots: list[str]) -> str:
         raise FileNotFoundError(str(real))
     if sys.platform == "win32":
         return _recycle_windows(real)
-    trash_dir = Path.home() / (".Trash" if sys.platform == "darwin" else ".local/share/Trash/files")
+    if sys.platform != "darwin":
+        raise RuntimeError("Moving sessions to the Trash is supported on macOS and Windows")
+    trash_dir = Path.home() / ".Trash"
     trash_dir.mkdir(parents=True, exist_ok=True)
 
     def unique(name: str) -> Path:

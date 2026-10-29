@@ -1,7 +1,7 @@
 name: CI
 
 # Every change is tested on all three platforms: LoopPrism reads other tools' files, spawns
-# processes and ships a desktop app, which is where macOS, Windows and Linux differ. The slower
+# processes and ships a desktop app, which is where macOS and Windows differ (the two platforms LoopPrism supports). The slower
 # installer smoke test lives in windows-smoke.yml.
 on:
   pull_request:
@@ -25,10 +25,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
         python: ["3.12"]
         include:
-          - os: ubuntu-latest
+          - os: macos-latest
             python: "3.10" # the oldest version pyproject.toml promises
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

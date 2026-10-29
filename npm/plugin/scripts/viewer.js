@@ -52,8 +52,7 @@ async function status(log = console.log, url = baseUrl()) {
 
 function launcher() {
   if (process.platform === 'darwin') return { cmd: 'open', pre: [] };
-  if (process.platform === 'win32') return { cmd: 'cmd', pre: ['/c', 'start', ''] };
-  return { cmd: 'xdg-open', pre: [] };
+  return { cmd: 'cmd', pre: ['/c', 'start', ''] }; // Windows; LoopPrism supports macOS and Windows
 }
 
 /**

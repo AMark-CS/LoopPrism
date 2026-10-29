@@ -107,6 +107,8 @@
 
 ## Supported apps and models
 
+LoopPrism runs on **macOS** and **Windows** with the same features on both: the desktop app, the `lprism` CLI, the hooks and the dashboard behave identically (only the system's own wording differs, such as Trash and Recycle Bin).
+
 | App | Sessions (read from disk) | Live runs (hooks) | Resume / delete here |
 |---|---|---|---|
 | **Claude Code** | `~/.claude/projects` (also subagent trees) | yes, plugin | yes |
