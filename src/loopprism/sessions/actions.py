@@ -100,7 +100,7 @@ def trash(path: str, allowed_roots: list[str]) -> str:
 
 def export_markdown(ps: ParsedSession) -> str:
     m = ps.meta
-    agent = {"claude-code": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "workbuddy": "WorkBuddy", "opencode": "OpenCode"}.get(m.agent, m.agent)
+    agent = {"claude-code": "Claude Code", "codex": "Codex", "dsh": "DeepSeek Harness", "workbuddy": "WorkBuddy", "opencode": "OpenCode", "gemini": "Gemini CLI", "cursor": "Cursor"}.get(m.agent, m.agent)
     lines = [f"# {m.title}", "", f"- Agent: {agent}", f"- Session: `{m.id}`"]
     if m.project:
         lines.append(f"- Project: `{m.project}`")

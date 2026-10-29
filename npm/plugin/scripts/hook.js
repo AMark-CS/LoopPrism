@@ -26,6 +26,18 @@ const EVENTS = {
   PostToolUseFailure: 'tool_failure',
   Stop: 'stop',
   SessionEnd: 'session_end',
+  // Gemini CLI's names for the same moments.
+  BeforeAgent: 'prompt',
+  AfterTool: 'tool',
+  AfterAgent: 'stop',
+  // Cursor's names. It identifies the conversation as conversation_id, the folder as workspace_roots,
+  // the tool result as tool_output and the failure as error_message.
+  beforeSubmitPrompt: 'prompt',
+  postToolUse: 'tool',
+  postToolUseFailure: 'tool_failure',
+  stop: 'stop',
+  sessionStart: 'session_start',
+  sessionEnd: 'session_end',
 };
 
 // Claude Code feeds some automatic messages back as prompts (system reminders,
@@ -56,14 +68,18 @@ function clip(value, depth = 0) {
 
 /** Map a hook payload to a LoopPrism ingest event, or null if it should be skipped. */
 function buildEvent(input, agent, env = process.env) {
-  const kind = EVENTS[input && input.hook_event_name];
-  if (!kind || !input.session_id) return null;
+  let kind = EVENTS[input && input.hook_event_name];
+  const sessionId = input && (input.session_id || input.conversation_id);
+  if (!kind || !sessionId) return null;
+  // Gemini CLI reports a failed tool in the result of AfterTool.
+  const failedResult = input.hook_event_name === 'AfterTool' && input.tool_response && input.tool_response.error;
+  if (failedResult) kind = 'tool_failure';
   const event = {
     agent,
     event: kind,
-    session_id: String(input.session_id),
+    session_id: String(sessionId),
     turn_id: input.turn_id,
-    cwd: input.cwd,
+    cwd: input.cwd || (Array.isArray(input.workspace_roots) ? input.workspace_roots[0] : undefined),
     model: input.model,
   };
   if (kind === 'prompt' && !env.LOOPPRISM_NO_PROMPTS) {
@@ -74,9 +90,9 @@ function buildEvent(input, agent, env = process.env) {
     event.tool_name = input.tool_name;
     event.tool_input = clip(input.tool_input);
     event.tool_use_id = input.tool_use_id;
-    event.duration_ms = input.duration_ms;
-    if (kind === 'tool') event.tool_response = clip(input.tool_response);
-    else event.error = clip(input.error);
+    event.duration_ms = input.duration_ms ?? input.duration;
+    if (kind === 'tool') event.tool_response = clip(input.tool_response ?? input.tool_output);
+    else event.error = clip(input.error || input.error_message || (failedResult && String(failedResult.message || failedResult)));
   }
   return event;
 }
@@ -120,9 +136,11 @@ async function send(event, url = baseUrl()) {
 async function main(argv = process.argv, env = process.env) {
   const i = argv.indexOf('--agent');
   const agent = i >= 0 && argv[i + 1] ? argv[i + 1] : 'unknown';
+  let reply = '{}';
   try {
-    if (env.LOOPPRISM_DISABLE === '1' || inBackoff()) return;
     const input = JSON.parse((await readStdin()) || '{}');
+    if (input.hook_event_name === 'beforeSubmitPrompt') reply = '{"continue":true}'; // Cursor asks whether the prompt may go ahead
+    if (env.LOOPPRISM_DISABLE === '1' || inBackoff()) return;
     const event = buildEvent(input, agent, env);
     if (!event) return;
     if (event.event === 'stop') {
@@ -138,7 +156,8 @@ async function main(argv = process.argv, env = process.env) {
   } catch (err) {
     if (env.LOOPPRISM_DEBUG === '1') process.stderr.write(`loopprism hook: ${err.message}\n`);
   } finally {
-    process.stdout.write('{}');
+    // Cursor's beforeSubmitPrompt expects an answer to "may this prompt go ahead?".
+    process.stdout.write(reply);
   }
 }
 

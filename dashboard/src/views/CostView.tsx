@@ -20,6 +20,8 @@ const AGENTS: [string, string][] = [
   ['dsh', 'DeepSeek Harness'],
   ['workbuddy', 'WorkBuddy'],
   ['opencode', 'OpenCode'],
+  ['gemini', 'Gemini CLI'],
+  ['cursor', 'Cursor'],
 ];
 const AGENT_LABEL = Object.fromEntries(AGENTS);
 
