@@ -248,7 +248,7 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
 
   let lastTurn = -1;
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 [&>*]:shrink-0">
       {traj.data.steps.length > 0 && (
         <Lanes steps={traj.data.steps} onPick={(s) => setFocusIdx(s.first_event)} />
       )}
