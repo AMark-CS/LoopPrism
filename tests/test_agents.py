@@ -95,6 +95,9 @@ def home(tmp_path, monkeypatch):
     S.write(tmp_path)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / ".claude"))
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
+    monkeypatch.setenv("DSH_HOME", str(tmp_path / ".dsh"))
+    monkeypatch.setenv("WORKBUDDY_CONFIG_DIR", str(tmp_path / ".workbuddy"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("HOME", str(tmp_path))
     return tmp_path
 

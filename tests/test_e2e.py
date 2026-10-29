@@ -71,13 +71,16 @@ def stack(mock_backend, tmp_path_factory):
     """Run `lprism proxy` for real; yield (proxy_url, api_url)."""
     db = tmp_path_factory.mktemp("e2e") / "traces.db"
     proxy_port, api_port = free_port(), free_port()
+    # To a file, not a pipe nobody reads: a full pipe blocks the server (Windows pipes are tiny).
+    log_path = db.parent / "proxy.log"
+    log = open(log_path, "wb")
     proc = subprocess.Popen(
         [
             sys.executable, "-c", "from loopprism.cli.main import app; app()",
             "proxy", "--port", str(proxy_port), "--dashboard-port", str(api_port),
             "--db", str(db),
         ],
-        stdout=subprocess.PIPE,
+        stdout=log,
         stderr=subprocess.STDOUT,
     )
     proxy_url = f"http://127.0.0.1:{proxy_port}"
@@ -86,7 +89,7 @@ def stack(mock_backend, tmp_path_factory):
         deadline = time.monotonic() + 20
         while True:
             if proc.poll() is not None:
-                pytest.fail(f"proxy exited early:\n{proc.stdout.read().decode()}")
+                pytest.fail(f"proxy exited early:\n{log_path.read_text(errors='replace')}")
             try:
                 if (
                     httpx.get(f"{proxy_url}/health", timeout=1).status_code == 200
@@ -105,6 +108,7 @@ def stack(mock_backend, tmp_path_factory):
             proc.wait(timeout=10)
         except subprocess.TimeoutExpired:
             proc.kill()
+        log.close()
 
 
 class Client:
@@ -245,7 +249,7 @@ def run_hook(api_url, payload, agent, tmp_path):
         capture_output=True,
         text=True,
         timeout=15,
-        env={**os.environ, "LOOPPRISM_URL": api_url, "TMPDIR": str(tmp_path)},
+        env={**os.environ, "LOOPPRISM_URL": api_url, "TMPDIR": str(tmp_path), "TEMP": str(tmp_path), "TMP": str(tmp_path)},
     )
     assert (r.returncode, r.stdout) == (0, "{}"), r.stderr
     return r

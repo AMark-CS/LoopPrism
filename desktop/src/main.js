@@ -4,6 +4,7 @@ const {
   BrowserWindow,
   Menu,
   Tray,
+  nativeTheme,
   clipboard,
   ipcMain,
   nativeImage,
@@ -16,6 +17,10 @@ const { Settings } = require("./settings");
 const { Sidecar } = require("./sidecar");
 
 const isDev = !app.isPackaged;
+// Windows has no "opened at login" flag to read back, so the login item passes one.
+const HIDDEN_FLAG = "--hidden";
+const launchedHidden = () =>
+  process.argv.includes(HIDDEN_FLAG) || app.getLoginItemSettings().wasOpenedAtLogin;
 const UI = path.join(__dirname, "ui");
 
 function sidecarBinary() {
@@ -23,7 +28,7 @@ function sidecarBinary() {
   const base = isDev
     ? path.join(__dirname, "..", "sidecar", "dist")
     : path.join(process.resourcesPath, "sidecar");
-  return path.join(base, "lprism", "lprism");
+  return path.join(base, "lprism", process.platform === "win32" ? "lprism.exe" : "lprism");
 }
 
 if (!app.requestSingleInstanceLock()) {
@@ -49,10 +54,13 @@ const STATUS_LABEL = {
 };
 
 function trayIcon() {
+  // macOS wants a monochrome "template" image that follows the menu bar's
+  // light/dark; the Windows tray shows a regular colour icon.
+  const mac = process.platform === "darwin";
   const img = nativeImage.createFromPath(
-    path.join(__dirname, "..", "assets", "trayTemplate.png"),
+    path.join(__dirname, "..", "assets", mac ? "trayTemplate.png" : "tray.png"),
   );
-  img.setTemplateImage(true);
+  if (mac) img.setTemplateImage(true);
   return img;
 }
 
@@ -75,7 +83,7 @@ function updateTray() {
         : []),
       { type: "separator" },
       { label: "Sessions", click: () => showWindow("sessions") },
-      { label: "Live runs", click: () => showWindow("live") },
+      { label: "Cost", click: () => showWindow("cost") },
       { label: "Apps…", click: () => showWindow("apps") },
       {
         label: "Copy proxy URL",
@@ -98,9 +106,10 @@ function createWindow() {
     minWidth: 820,
     minHeight: 520,
     title: "LoopPrism",
-    backgroundColor: "#0e0e13",
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: { x: 16, y: 14 },
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0e0e13" : "#f6f6fa",
+    ...(process.platform === "darwin"
+      ? { titleBarStyle: "hiddenInset", trafficLightPosition: { x: 16, y: 14 } }
+      : { autoHideMenuBar: true }),
     webPreferences: {
       contextIsolation: true,
       sandbox: true,
@@ -214,8 +223,9 @@ function registerIpc() {
   handle("settings:save", async (patch) => {
     const before = settings.all();
     const values = settings.update(patch);
+    if ("theme" in patch) nativeTheme.themeSource = values.theme;
     if ("openAtLogin" in patch) {
-      app.setLoginItemSettings({ openAtLogin: values.openAtLogin, openAsHidden: true });
+      app.setLoginItemSettings({ openAtLogin: values.openAtLogin, openAsHidden: true, args: [HIDDEN_FLAG] });
     }
     if (
       values.proxyPort !== before.proxyPort ||
@@ -246,6 +256,11 @@ app.on("second-instance", () => showWindow());
 
 app.whenReady().then(async () => {
   settings = new Settings(path.join(app.getPath("userData"), "settings.json"));
+  // The Theme setting ("dark" | "light" | "system") drives Electron's nativeTheme: the window's
+  // title bar and scrollbars, and `prefers-color-scheme` for the app UI and the embedded dashboard.
+  nativeTheme.themeSource = settings.get("theme");
+  // Windows would show a default File/Edit/View menu bar above the UI.
+  if (process.platform !== "darwin") Menu.setApplicationMenu(null);
   sidecar = new Sidecar({
     binary: sidecarBinary(),
     logFile: path.join(app.getPath("logs"), "sidecar.log"),
@@ -259,6 +274,8 @@ app.whenReady().then(async () => {
   registerIpc();
 
   tray = new Tray(trayIcon());
+  // The Windows tray opens the app on a click; macOS shows the menu.
+  if (process.platform !== "darwin") tray.on("click", () => showWindow());
   updateTray();
   startUpdater();
 
@@ -270,16 +287,64 @@ app.whenReady().then(async () => {
 
   // Show the window straight away (it says "Starting…"); stay hidden when the
   // login item launched us.
-  if (!app.getLoginItemSettings().wasOpenedAtLogin) createWindow();
+  if (!launchedHidden()) createWindow();
 
   await sidecar.start();
   refreshHooks().catch(() => {});
+  if (process.env.LPRISM_TOUR_DIR) runTour(process.env.LPRISM_TOUR_DIR).catch((e) => console.error("tour", e));
 });
+
+/**
+ * Test hook (LPRISM_TOUR_DIR): visit every page and save a PNG of each, so the UI can be compared
+ * across platforms. LPRISM_TOUR_SESSION adds the views of one session.
+ */
+async function runTour(dir) {
+  const fs = require("node:fs");
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  fs.mkdirSync(dir, { recursive: true });
+  const shot = async (name) => {
+    const image = await win.webContents.capturePage();
+    fs.writeFileSync(path.join(dir, `${process.env.LPRISM_TOUR_PREFIX || ""}${name}.png`), image.toPNG());
+    console.log(`tour: ${name} ${image.getSize().width}x${image.getSize().height}`);
+  };
+  while (status.state !== "running") await wait(250);
+  showWindow();
+  const [tw, th] = (process.env.LPRISM_TOUR_SIZE || "1280x820").split("x").map(Number);
+  win.setSize(tw, th);
+  win.webContents.setZoomFactor(Number(process.env.LPRISM_TOUR_ZOOM || 1));
+  await wait(2500);
+  for (const tab of ["sessions", "cost", "apps", "settings"]) {
+    showWindow(tab);
+    await wait(3000);
+    await shot(tab);
+  }
+  const sid = process.env.LPRISM_TOUR_SESSION;
+  if (sid) {
+    showWindow("sessions");
+    for (const view of ["chat", "trajectory", "context", "agents"]) {
+      await win.webContents.executeJavaScript(
+        `document.querySelector("#dash").src = ${JSON.stringify(`${status.dashboardUrl}/?theme=auto#/sessions/${sid}/${view}`)}`,
+      );
+      await wait(3000);
+      await shot(`session-${view}`);
+    }
+  }
+  win.setSize(900, 640); // a narrow window, to see the responsive layout
+  showWindow("sessions");
+  await wait(2000);
+  await shot("narrow");
+  if (process.env.LPRISM_TOUR_QUIT === "1") app.quit();
+}
 
 /** Looks for a newer release a few seconds after launch (at most once a day). */
 function startUpdater() {
-  // The installed bundle: <name>.app/Contents/MacOS/<binary>
-  const bundle = app.isPackaged ? path.resolve(process.execPath, "..", "..", "..") : null;
+  // What the updater replaces: the .app bundle (<name>.app/Contents/MacOS/<binary>) on
+  // macOS; on Windows the installer handles it, so the running exe is enough.
+  const bundle = !app.isPackaged
+    ? null
+    : process.platform === "win32"
+      ? process.execPath
+      : path.resolve(process.execPath, "..", "..", "..");
   const override = process.env.LPRISM_UPDATE_API; // tests / development: a fake release feed
   updater = new Updater({
     current: app.getVersion(),
@@ -301,6 +366,13 @@ function startUpdater() {
   // GitHub is asked at most once a day; the hourly tick only retries a check that failed
   // (offline, rate limit) or runs when a day has passed in a long-running app.
   setTimeout(() => updater.checkIfDue(), 8000);
+  // End-to-end test hook (only with the fake feed above): fetch and install whatever it offers.
+  if (override && process.env.LPRISM_UPDATE_AUTOINSTALL === "1") {
+    setTimeout(async () => {
+      await updater.check({ manual: true });
+      await updater.install();
+    }, 10_000);
+  }
   setInterval(() => updater.checkIfDue(), 60 * 60 * 1000);
 }
 
@@ -319,7 +391,7 @@ async function refreshHooks() {
   settings.update({ hooksHash: hash });
 }
 
-// Closing the window keeps the proxy running in the menu bar.
+// Closing the window keeps the proxy running in the menu bar / system tray.
 app.on("window-all-closed", () => {});
 app.on("activate", () => showWindow());
 

@@ -13,7 +13,20 @@ import { ContextTab } from './session/ContextTab';
 import { TrajectoryTab } from './session/TrajectoryTab';
 import type { SessionSummary } from '../types/sessions';
 
-const AGENT_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
+const AGENT_LABEL: Record<string, string> = {
+  'claude-code': 'Claude Code',
+  codex: 'Codex',
+  dsh: 'DeepSeek Harness',
+  workbuddy: 'WorkBuddy',
+  opencode: 'OpenCode',
+};
+const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error'> = {
+  'claude-code': 'muted',
+  codex: 'primary',
+  dsh: 'ok',
+  workbuddy: 'warn',
+  opencode: 'error',
+};
 const TABS = [
   { key: 'chat', label: 'Chat' },
   { key: 'trajectory', label: 'Trajectory' },
@@ -21,7 +34,9 @@ const TABS = [
   { key: 'agents', label: 'Agents' },
 ] as const;
 
-const basename = (p: string | null) => (p ? p.split('/').filter(Boolean).pop() ?? p : 'No project');
+const basename = (p: string | null) => (p ? p.split(/[\\/]/).filter(Boolean).pop() ?? p : 'No project');
+// Windows has a Recycle Bin, not a Trash.
+const BIN = /Windows/i.test(navigator.userAgent) ? 'Recycle Bin' : 'Trash';
 const ago = (s: SessionSummary) => {
   const ts = s.ended_at ?? s.started_at;
   return ts ? formatDistanceToNow(parseUtc(ts), { addSuffix: true }) : '';
@@ -72,7 +87,7 @@ function SessionList({
 
   async function deletePicked() {
     if (!picked.size) return;
-    if (!window.confirm(`Move ${picked.size} session${picked.size > 1 ? 's' : ''} to the Trash?`)) return;
+    if (!window.confirm(`Move ${picked.size} session${picked.size > 1 ? 's' : ''} to the ${BIN}?`)) return;
     setError('');
     for (const id of picked) {
       try {
@@ -130,11 +145,14 @@ function SessionList({
             className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1.5 pl-7 pr-2 text-xs outline-none focus:border-[var(--color-primary)]"
           />
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           {[
             ['', 'All'],
             ['claude-code', 'Claude Code'],
             ['codex', 'Codex'],
+            ['dsh', 'DeepSeek Harness'],
+            ['workbuddy', 'WorkBuddy'],
+            ['opencode', 'OpenCode'],
           ].map(([k, label]) => (
             <button
               key={k}
@@ -154,17 +172,17 @@ function SessionList({
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-[var(--color-muted-foreground)]">{picked.size} selected</span>
             <Button tone="danger" disabled={!picked.size} onClick={deletePicked}>
-              <Trash2 className="h-3 w-3" /> Move to Trash
+              <Trash2 className="h-3 w-3" /> Move to {BIN}
             </Button>
           </div>
         )}
-        {error && <div className="text-[11px] text-[#f87171]">{error}</div>}
+        {error && <div className="text-[11px] text-[var(--tone-error-fg)]">{error}</div>}
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {isLoading && <Empty>Loading sessions…</Empty>}
         {!isLoading && sessions.length === 0 && (
-          <Empty>{debounced ? 'No sessions match.' : 'No Claude Code or Codex sessions found on this Mac.'}</Empty>
+          <Empty>{debounced ? 'No sessions match.' : 'No agent sessions found on this computer.'}</Empty>
         )}
         {groups.map(([label, items]) => (
           <div key={label}>
@@ -175,13 +193,15 @@ function SessionList({
               <div
                 key={s.id}
                 className={`flex gap-2 border-b border-[var(--color-border)] px-3 py-2.5 ${
-                  activeId === s.id ? 'bg-[var(--color-accent)]' : 'hover:bg-[#ffffff08]'
+                  activeId === s.id ? 'bg-[var(--color-accent)]' : 'hover:bg-[var(--hover)]'
                 }`}
               >
                 {selecting && (
                   <input
                     type="checkbox"
                     className="mt-1 shrink-0"
+                    disabled={s.read_only}
+                    title={s.read_only ? 'Read-only: delete it from its own app' : undefined}
                     checked={picked.has(s.id)}
                     onChange={(e) => {
                       const n = new Set(picked);
@@ -199,7 +219,7 @@ function SessionList({
                     </div>
                   )}
                   <div className="mt-1 flex items-center gap-2 text-[10px] text-[var(--color-muted-foreground)]">
-                    <Badge tone={s.agent === 'codex' ? 'primary' : 'muted'}>{AGENT_LABEL[s.agent]}</Badge>
+                    <Badge tone={AGENT_TONE[s.agent] ?? 'muted'}>{AGENT_LABEL[s.agent] ?? s.agent}</Badge>
                     <span className="truncate">{basename(s.project)}</span>
                     <span className="ml-auto shrink-0">{ago(s)}</span>
                   </div>
@@ -234,13 +254,13 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
     setMsg('');
     try {
       await api.resumeSession(id, true);
-      setMsg('Opened in Terminal');
+      setMsg('Opened in a terminal');
     } catch (e) {
       setMsg((e as Error).message);
     }
   }
   async function remove() {
-    if (!window.confirm(`Move “${s.title}” to the Trash?`)) return;
+    if (!window.confirm(`Move “${s.title}” to the ${BIN}?`)) return;
     try {
       await api.deleteSession(id);
       qc.invalidateQueries({ queryKey: ['sessions'] });
@@ -273,7 +293,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold">{s.title}</h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-[var(--color-muted-foreground)]">
-              <Badge tone={s.agent === 'codex' ? 'primary' : 'muted'}>{AGENT_LABEL[s.agent]}</Badge>
+              <Badge tone={AGENT_TONE[s.agent] ?? 'muted'}>{AGENT_LABEL[s.agent] ?? s.agent}</Badge>
               {s.started_at && <span>{parseUtc(s.started_at).toLocaleString()}</span>}
               {s.project && <span className="truncate font-mono">{s.project}</span>}
               {s.models.map((m) => (
@@ -284,9 +304,11 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           </div>
           {!isSub && (
           <div className="flex shrink-0 items-center gap-2">
-            <Button tone="primary" onClick={resume} title="Open a new Terminal window and resume this session">
-              <Play className="h-3 w-3" /> Resume
-            </Button>
+            {!s.read_only && (
+              <Button tone="primary" onClick={resume} title="Open a new terminal window and resume this session">
+                <Play className="h-3 w-3" /> Resume
+              </Button>
+            )}
             <a
               href={`/api/sessions/${id}/export.md`}
               download={`${s.title.slice(0, 40)}.md`}
@@ -294,9 +316,11 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
             >
               <Download className="h-3 w-3" /> Export
             </a>
-            <Button tone="danger" onClick={remove}>
-              <Trash2 className="h-3 w-3" />
-            </Button>
+            {!s.read_only && (
+              <Button tone="danger" onClick={remove}>
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            )}
           </div>
           )}
         </div>
@@ -310,7 +334,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           </div>
         )}
         {findings.filter((f) => f.severity !== 'info').length > 0 && tab === 'chat' && (
-          <div className="text-[11px] text-[#fbbf24]">
+          <div className="text-[11px] text-[var(--tone-warn-fg)]">
             {findings.filter((f) => f.severity !== 'info').length} patterns worth a look — see Trajectory.
           </div>
         )}

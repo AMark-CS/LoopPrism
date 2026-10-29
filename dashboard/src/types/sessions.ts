@@ -1,10 +1,12 @@
 /** Types for the session inspector API (/api/sessions). */
 
-export type AgentId = 'claude-code' | 'codex';
+export type AgentId = 'claude-code' | 'codex' | 'dsh' | 'workbuddy' | 'opencode';
 
 export interface SessionSummary {
   id: string;
   agent: AgentId;
+  /** LoopPrism only reads these sessions: no resume, no delete. */
+  read_only?: boolean;
   path: string;
   project: string | null;
   title: string;
@@ -223,4 +225,28 @@ export interface AgentTree {
     total_cost_usd: number | null;
     passed_tokens: number;
   };
+}
+
+/** One row of the cost overview: spend and tokens for a day, model, agent or project. */
+export interface CostRow {
+  key: string;
+  steps: number;
+  input: number;
+  output: number;
+  cache_read: number;
+  cache_write: number;
+  cost: number | null;
+  priced: number;
+}
+
+export interface CostOverview {
+  days: number;
+  pending: number;
+  totals: Omit<CostRow, 'key'> & { sessions: number; unpriced_steps: number };
+  by_day: CostRow[];
+  by_model: CostRow[];
+  by_agent: CostRow[];
+  by_project: CostRow[];
+  top_sessions: { id: string; agent: AgentId; title: string; project: string | null; started_at: string | null; cost: number }[];
+  unpriced_models: string[];
 }

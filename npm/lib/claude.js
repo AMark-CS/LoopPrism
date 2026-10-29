@@ -8,9 +8,17 @@ const { packageRoot, stableDirs } = require('./paths');
 
 const PLUGIN = 'loopprism@loopprism';
 
+// `claude` may be a .cmd shim on Windows (npm install), which only runs through a shell.
+const WIN = process.platform === 'win32';
+const quote = (a) => (/[\s"&|<>^()%]/.test(a) ? `"${a.replace(/"/g, '\\"')}"` : a);
+
 function run(args, env = process.env) {
-  const r = spawnSync('claude', args, { encoding: 'utf8', env });
-  return { ok: r.status === 0, out: `${r.stdout || ''}${r.stderr || ''}`.trim(), missing: r.error?.code === 'ENOENT' };
+  const r = WIN
+    ? spawnSync(['claude', ...args.map(quote)].join(' '), { encoding: 'utf8', env, shell: true, windowsHide: true })
+    : spawnSync('claude', args, { encoding: 'utf8', env });
+  // cmd.exe reports a missing command as exit code 1 plus a message, not ENOENT.
+  const missing = r.error?.code === 'ENOENT' || (WIN && r.status !== 0 && /not recognized|cannot find/i.test(`${r.stderr}`));
+  return { ok: r.status === 0, out: `${r.stdout || ''}${r.stderr || ''}`.trim(), missing };
 }
 
 function available(env = process.env) {

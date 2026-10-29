@@ -105,8 +105,8 @@ function Tree({ id, tree }: { id: string; tree: NonNullable<ReturnType<typeof us
       >
         <Flow layout={layout} selected={selected} onSelect={setSelected} playing={playing} />
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-muted-foreground)]">
-          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[#a1a1aa]" />task out</span>
-          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full border-2 border-[#a1a1aa]" />result back</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-subtle)]" />task out</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full border-2 border-[var(--color-subtle)]" />result back</span>
           <span>line weight = cost</span>
           <span><i className="mr-1.5 inline-block h-2 w-3.5 rounded-sm border border-dashed border-[#7c3aed99] bg-[#7c3aed22]" />agents running in parallel</span>
           <span>time runs left to right</span>
@@ -195,7 +195,7 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
           el.setAttribute('cy', String(pt.y));
           el.setAttribute('r', String(r * (1 - i * 0.25)));
           if (seg === 2) {
-            el.setAttribute('fill', '#111118');
+            el.setAttribute('fill', 'var(--color-card)');
             el.setAttribute('stroke', it.p.color);
             el.setAttribute('stroke-width', '2');
           } else {
@@ -244,11 +244,11 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
             <rect key={i} x={b.x0} y={layout.bandTop} width={b.x1 - b.x0} height={layout.bandBottom - layout.bandTop} rx={14}
               fill="#7c3aed" fillOpacity={0.07} stroke="#7c3aed" strokeOpacity={0.35} strokeDasharray="4 4" />
           ))}
-          <g stroke="#27273a" strokeWidth={1}>
+          <g stroke="var(--color-border)" strokeWidth={1}>
             <path d={`M60 ${layout.axisY} H700`} />
             {layout.ticks.map((t, i) => <path key={i} d={`M${t.x} ${layout.axisY - 4} V${layout.axisY + 4}`} />)}
           </g>
-          <g fill="#71717a" fontSize={10} textAnchor="middle">
+          <g fill="var(--color-muted-foreground)" fontSize={10} textAnchor="middle">
             {layout.ticks.map((t, i) => <text key={i} x={t.x} y={layout.axisY + 18}>{t.label}</text>)}
           </g>
           <g fill="none" strokeLinecap="round" opacity={0.12}>
@@ -256,7 +256,7 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
             {layout.placed.map((p) => <path key={p.agent.id} d={`${p.out} ${p.lanePath} ${p.back.replace(/^M[^C]*/, '')}`} stroke={p.color} strokeWidth={p.width + 6} />)}
           </g>
           <path d={layout.main.lanePath} stroke={MAIN_COLOR} strokeWidth={4} strokeLinecap="round" fill="none" opacity={0.6} />
-          <path data-flow="main" d={layout.main.lanePath} stroke="#c4b5fd" strokeWidth={4} strokeLinecap="round" fill="none" strokeDasharray="2 22" />
+          <path data-flow="main" d={layout.main.lanePath} stroke="var(--flow-main)" strokeWidth={4} strokeLinecap="round" fill="none" strokeDasharray="2 22" />
           <g fill="none" strokeLinecap="round" opacity={0.75}>
             {layout.placed.map((p) => (
               <g key={p.agent.id} stroke={p.color} strokeWidth={p.width} strokeDasharray={p.open ? '4 4' : undefined}>
@@ -266,8 +266,8 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
           </g>
           {layout.placed.map((p) => (
             <g key={p.agent.id}>
-              <circle cx={p.xb} cy={p.parentY} r={4} fill="#e4e4e7" />
-              {!p.open && <circle cx={p.xm} cy={p.parentY} r={4} fill="#111118" stroke="#e4e4e7" strokeWidth={2} />}
+              <circle cx={p.xb} cy={p.parentY} r={4} fill="var(--color-foreground)" />
+              {!p.open && <circle cx={p.xm} cy={p.parentY} r={4} fill="var(--color-card)" stroke="var(--color-foreground)" strokeWidth={2} />}
               <g fill="none" stroke="none">
                 <path data-flow={`${p.agent.id}-out`} d={p.out} />
                 <path data-flow={`${p.agent.id}-lane`} d={p.lanePath} />
@@ -301,7 +301,7 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
                 data-bubble={p.agent.id}
                 onClick={() => onSelect(p.agent.id)}
                 aria-label={`Show ${p.agent.name}`}
-                className="absolute flex h-[30px] w-[30px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] border-[#111118] text-white transition-shadow"
+                className="absolute flex h-[30px] w-[30px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] border-[var(--color-card)] text-white transition-shadow"
                 style={{ ...pos(x, p.y), background: p.color, outline: sel ? `2px solid ${p.color}` : undefined, outlineOffset: 2 }}
               >
                 <Icon className="h-4 w-4" />
@@ -309,14 +309,14 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
               <button
                 type="button"
                 onClick={() => onSelect(p.agent.id)}
-                className={`absolute max-w-[190px] rounded-lg border bg-[#0a0a0fcc] px-2.5 py-1.5 text-left leading-tight ${
+                className={`absolute max-w-[190px] rounded-lg border bg-[var(--label-bg)] px-2.5 py-1.5 text-left leading-tight ${
                   sel ? 'border-[var(--color-primary)]' : 'border-[var(--color-border)] hover:border-[var(--color-primary)]'
                 }`}
                 style={isMain ? pos(52, 8) : pos(p.xs + 2, p.y + 16)}
               >
                 <b className="block truncate text-xs font-semibold">{p.agent.name}</b>
                 <span className="block truncate text-[11px] text-[var(--color-muted-foreground)]">{isMain ? p.agent.model ?? 'main agent' : p.agent.role}</span>
-                <i className="block truncate text-[11px] not-italic tabular-nums text-[#a1a1aa]">{meta(p.agent) || '—'}</i>
+                <i className="block truncate text-[11px] not-italic tabular-nums text-[var(--color-subtle)]">{meta(p.agent) || '—'}</i>
               </button>
             </div>
           );
@@ -330,7 +330,7 @@ function Pill({ style, value, color, up }: { style: React.CSSProperties; value: 
   const Arrow = up ? ArrowUpRight : ArrowDownLeft;
   return (
     <span
-      className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 whitespace-nowrap rounded-full border border-[var(--color-border)] bg-[var(--color-background)] py-px pl-1 pr-1.5 text-[10px] tabular-nums text-[#a1a1aa]"
+      className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 whitespace-nowrap rounded-full border border-[var(--color-border)] bg-[var(--color-background)] py-px pl-1 pr-1.5 text-[10px] tabular-nums text-[var(--color-subtle)]"
       style={style}
       title={up ? 'Task handed to the subagent (estimated tokens)' : 'Result returned to its parent (estimated tokens)'}
     >
@@ -386,7 +386,7 @@ function Detail({ id, placed }: { id: string; placed: Placed }) {
 function Handoff({ icon, title, text }: { icon: React.ReactNode; title: string; text: AgentNode['task'] }) {
   return (
     <div className="min-w-0 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] p-2.5">
-      <h4 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[#a1a1aa]">
+      <h4 className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-[var(--color-subtle)]">
         {icon} {title}
         {text && <span className="ml-auto"><Badge>~{formatTokens(text.tokens)} tok</Badge></span>}
       </h4>

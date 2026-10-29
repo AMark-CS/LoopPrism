@@ -30,7 +30,7 @@ async function fetchJson(url) {
 }
 
 /** Is `pid` alive and one of our lprism processes? */
-function isLprism(pid) {
+function isLprism(pid, platform = process.platform) {
   try {
     process.kill(pid, 0);
   } catch {
@@ -38,6 +38,14 @@ function isLprism(pid) {
   }
   try {
     const { execFileSync } = require("node:child_process");
+    if (platform === "win32") {
+      // No `ps` on Windows; tasklist reports the image name (the command line isn't available).
+      const out = execFileSync("tasklist", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
+        encoding: "utf8",
+        windowsHide: true,
+      });
+      return /"lprism\.exe"/i.test(out);
+    }
     const cmd = execFileSync("ps", ["-p", String(pid), "-o", "command="], {
       encoding: "utf8",
     });
@@ -206,7 +214,10 @@ class Sidecar extends EventEmitter {
     this.log(`spawn ${this.binary} ${args.join(" ")}`);
     const child = spawn(this.binary, args, {
       stdio: ["ignore", out, out],
-      env: { ...process.env, NO_COLOR: "1", PYTHONUNBUFFERED: "1" },
+      windowsHide: true, // no console window next to the app
+      // UTF-8 for Python's stdout/log file: Windows would otherwise use the ANSI code page
+      // and fail on the first non-ASCII character in a log line.
+      env: { ...process.env, NO_COLOR: "1", PYTHONUNBUFFERED: "1", PYTHONUTF8: "1", PYTHONIOENCODING: "utf-8" },
     });
     fs.closeSync(out);
     this.child = child;
@@ -321,4 +332,4 @@ class Sidecar extends EventEmitter {
   }
 }
 
-module.exports = { Sidecar };
+module.exports = { Sidecar, isLprism };

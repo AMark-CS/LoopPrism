@@ -1,7 +1,7 @@
 name: Release desktop app
 
-# Push a tag like `desktop-v0.1.0` to build the macOS app and publish a
-# GitHub Release with the .dmg and .zip artifacts.
+# Push a tag like `desktop-v0.1.0` to build the macOS app (.dmg, .zip) and the
+# Windows installer (.exe) and publish them as a GitHub Release.
 on:
   push:
     tags:
@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    name: Build (${{ matrix.arch }})
+    name: Build (${{ matrix.name }})
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -21,10 +21,13 @@ jobs:
         include:
           # The PyInstaller sidecar is frozen per-architecture, so each arch
           # builds natively on its own runner.
-          - arch: arm64
+          - name: mac-arm64
             runner: macos-14
-          - arch: x64
+          - name: mac-x64
             runner: macos-15-intel
+          # NSIS installer for Windows x64 (no ARM build yet).
+          - name: windows-x64
+            runner: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -61,12 +64,18 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      # A tag must not publish a Windows build that cannot install, start or update itself.
+      - name: Smoke test the Windows installer
+        if: runner.os == 'Windows'
+        run: ./desktop/scripts/smoke-windows.ps1
+
       - uses: actions/upload-artifact@v4
         with:
-          name: LoopPrism-${{ matrix.arch }}
+          name: LoopPrism-${{ matrix.name }}
           path: |
             desktop/release/*.dmg
             desktop/release/*.zip
+            desktop/release/*.exe
           if-no-files-found: error
 
   release:
@@ -91,4 +100,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "LoopPrism Desktop ${TAG#desktop-v}" \
             --generate-notes \
-            --notes "Unsigned macOS builds: right-click the app → Open on first launch, or run \`xattr -dr com.apple.quarantine /Applications/LoopPrism.app\`. See desktop/README.md."
+            --notes "Unsigned builds. macOS: right-click the app → Open on first launch, or run \`xattr -dr com.apple.quarantine /Applications/LoopPrism.app\`. Windows (x64): run the .exe, choose where to install, and if SmartScreen warns choose More info → Run anyway; the installer was installed, launched and updated on a Windows runner before this release was created. See desktop/README.md."

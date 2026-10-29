@@ -10,6 +10,11 @@ hiddenimports += collect_submodules("uvicorn")
 # SQLAlchemy loads the async sqlite dialect lazily by URL scheme.
 hiddenimports += collect_submodules("sqlalchemy.dialects.sqlite")
 hiddenimports += ["aiosqlite"]
+# DeepSeek Harness sessions are zstd-compressed; the package is a C extension PyInstaller must keep.
+try:
+    hiddenimports += collect_submodules("zstandard")
+except Exception:
+    pass
 hiddenimports += collect_submodules("loopprism")
 # Optional uvicorn[standard] accelerators; fine if absent.
 for optional in ("uvloop", "httptools", "websockets", "watchfiles"):

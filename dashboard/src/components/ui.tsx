@@ -38,10 +38,10 @@ export function Badge({
 }) {
   const tones = {
     muted: 'bg-[var(--color-secondary)] text-[var(--color-muted-foreground)]',
-    primary: 'bg-[#2b2150] text-[#b9a6ff]',
-    ok: 'bg-[#10301f] text-[#4ade80]',
-    warn: 'bg-[#33290d] text-[#fbbf24]',
-    error: 'bg-[#3a1717] text-[#f87171]',
+    primary: 'bg-[var(--tone-primary-bg)] text-[var(--tone-primary-fg)]',
+    ok: 'bg-[var(--tone-ok-bg)] text-[var(--tone-ok-fg)]',
+    warn: 'bg-[var(--tone-warn-bg)] text-[var(--tone-warn-fg)]',
+    error: 'bg-[var(--tone-error-bg)] text-[var(--tone-error-fg)]',
   };
   return (
     <span
@@ -88,7 +88,7 @@ export function Button({
     default:
       'border border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-accent)]',
     primary: 'bg-[var(--color-primary)] text-white hover:opacity-90',
-    danger: 'bg-[#7f1d1d] text-white hover:bg-[#991b1b]',
+    danger: 'bg-[var(--danger)] text-white hover:bg-[var(--danger-hover)]',
   };
   return (
     <button

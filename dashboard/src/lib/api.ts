@@ -75,6 +75,8 @@ export const api = {
     ),
 
   // Sessions (inspector)
+  costOverview: (days: number, agent?: string) =>
+    get<S.CostOverview>(`/api/sessions/cost/overview?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}`),
   listSessions: (params: { q?: string; agent?: string; project?: string }) => {
     const qs = new URLSearchParams();
     if (params.q) qs.set('q', params.q);

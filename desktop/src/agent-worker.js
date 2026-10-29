@@ -14,10 +14,12 @@ const { spawnSync } = require("node:child_process");
 const root = process.env.LPRISM_AGENT_ROOT;
 const claude = require(path.join(root, "lib", "claude"));
 const codex = require(path.join(root, "lib", "codex"));
+const workbuddy = require(path.join(root, "lib", "workbuddy"));
 const { codexHome } = require(path.join(root, "lib", "paths"));
 
 function hasCli(name) {
-  const r = spawnSync(name, ["--version"], { encoding: "utf8" });
+  // On Windows `codex` is usually a .cmd shim, which only runs through a shell.
+  const r = spawnSync(name, ["--version"], { encoding: "utf8", shell: process.platform === "win32", windowsHide: true });
   return !r.error && r.status === 0;
 }
 
@@ -41,11 +43,18 @@ function status() {
   } catch (err) {
     out.codex.error = err.message;
   }
+  out.workbuddy = { cli: false, found: false, connected: false };
+  try {
+    out.workbuddy.found = workbuddy.available();
+    out.workbuddy.connected = workbuddy.isInstalled();
+  } catch (err) {
+    out.workbuddy.error = err.message;
+  }
   return out;
 }
 
 function run(action, target) {
-  const mod = { claude, codex }[target];
+  const mod = { claude, codex, workbuddy }[target];
   if (!mod) throw new Error(`unknown app: ${target}`);
   if (action === "install") mod.install();
   else if (action === "uninstall") mod.uninstall();

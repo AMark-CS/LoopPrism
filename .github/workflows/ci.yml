@@ -1,0 +1,116 @@
+name: CI
+
+# Every change is tested on all three platforms: LoopPrism reads other tools' files, spawns
+# processes and ships a desktop app, which is where macOS and Windows differ (the two platforms LoopPrism supports). The slower
+# installer smoke test lives in windows-smoke.yml.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, windows-support, "feat/**"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+        python: ["3.12"]
+        include:
+          - os: macos-latest
+            python: "3.10" # the oldest version pyproject.toml promises
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[dev]"
+      # A hung test is killed after a minute instead of eating the job. On failure the summary
+      # is also an annotation, which can be read without logging in.
+      - name: Test
+        shell: bash
+        run: |
+          set +e
+          python -m pytest -q -rfE --tb=short --timeout=60 -p no:cacheprovider 2>&1 | tee pytest.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            echo "::error title=pytest failed on ${{ matrix.os }}::$(tail -n 40 pytest.log | sed ':a;N;$!ba;s/\n/%0A/g')"
+          fi
+          exit $code
+
+  node:
+    name: Desktop and npm tests on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Desktop tests
+        working-directory: desktop
+        shell: bash
+        run: |
+          npm ci
+          node --test --test-timeout=60000 --test-reporter=spec 2>&1 | tee test.log
+          code=${PIPESTATUS[0]}
+          [ "$code" -eq 0 ] || echo "::error title=desktop tests failed on ${{ matrix.os }}::$(tail -n 40 test.log | sed ':a;N;$!ba;s/\n/%0A/g')"
+          exit $code
+      - name: npm package tests
+        if: always()
+        working-directory: npm
+        shell: bash
+        run: |
+          node --test --test-timeout=60000 --test-reporter=spec 2>&1 | tee test.log
+          code=${PIPESTATUS[0]}
+          [ "$code" -eq 0 ] || echo "::error title=npm tests failed on ${{ matrix.os }}::$(tail -n 40 test.log | sed ':a;N;$!ba;s/\n/%0A/g')"
+          exit $code
+
+  dashboard:
+    name: Dashboard lint and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - name: Install
+        working-directory: dashboard
+        run: npm ci
+      # Advisory for now: the React compiler rules flag a few older components (TrajectoryTab,
+      # ContextTab) that predate them. Make it blocking once those are cleaned up.
+      - name: Lint
+        working-directory: dashboard
+        continue-on-error: true
+        run: npm run lint
+      - name: Type check and build
+        working-directory: dashboard
+        run: npm run build
+      - name: The committed dashboard build is current
+        shell: bash
+        run: |
+          # src/loopprism/dashboard/dist is what pip users get: it must match dashboard/src.
+          diff -rq dashboard/dist src/loopprism/dashboard/dist

@@ -12,6 +12,14 @@ export function useSessionList(params: { q?: string; agent?: string; project?: s
   });
 }
 
+export const useCostOverview = (days: number, agent?: string) =>
+  useQuery({
+    queryKey: ['cost-overview', days, agent ?? ''],
+    queryFn: () => api.costOverview(days, agent),
+    refetchInterval: (q) => (q.state.data?.pending ? 2000 : 30000),
+    placeholderData: (prev) => prev,
+  });
+
 export const useSession = (id: string | null) =>
   useQuery({
     queryKey: ['session', id],

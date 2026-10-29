@@ -2,6 +2,7 @@
 
 import json
 import os
+import sys
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -243,6 +244,9 @@ def home(tmp_path, monkeypatch):
     codex_dir.mkdir(parents=True)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / ".claude"))
     monkeypatch.setenv("CODEX_HOME", str(tmp_path / ".codex"))
+    monkeypatch.setenv("DSH_HOME", str(tmp_path / ".dsh"))  # never read the machine's own DeepSeek Harness / WorkBuddy
+    monkeypatch.setenv("WORKBUDDY_CONFIG_DIR", str(tmp_path / ".workbuddy"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
     monkeypatch.setenv("HOME", str(tmp_path))
     return tmp_path
 
@@ -301,7 +305,8 @@ class TestApi:
         r = await api.post(f"/api/sessions/{sid}/delete")
         assert r.status_code == 200
         assert not os.path.exists(home / ".claude" / "projects" / "-work-app" / f"{SID}.jsonl")
-        assert os.path.exists(r.json()["trashed"])
+        if sys.platform != "win32":  # on Windows the file goes to the Recycle Bin, which has no path to check
+            assert os.path.exists(r.json()["trashed"])
         assert (await api.get("/api/sessions")).json()["total"] == 0
 
     @pytest.mark.asyncio
@@ -368,3 +373,62 @@ class TestCodexHistoryPages:
         store = SessionStore(index)
         store.refresh(5)
         assert "stale-duplicate" not in [r["id"] for r in store.list()]
+
+
+class TestWindowsActions:
+    """Resume and delete take a Windows path (commands are faked; this runs anywhere)."""
+
+    def meta(self, tmp_path):
+        from loopprism.sessions.models import SessionMeta
+
+        return SessionMeta(id="abcdef123456", agent="claude-code", path="x.jsonl", project=str(tmp_path))
+
+    def test_resume_command_uses_cd_d_and_cmd_quoting(self, tmp_path, monkeypatch):
+        from loopprism.sessions import actions
+
+        monkeypatch.setattr(actions.sys, "platform", "win32")
+        spaced = tmp_path / "my project"
+        spaced.mkdir()
+        meta = self.meta(spaced)
+        assert actions.resume_command(meta) == f'cd /d "{spaced}" && claude --resume abcdef123456'
+        plain = tmp_path / "plain"
+        plain.mkdir()
+        assert actions.resume_command(self.meta(plain)) == f"cd /d {plain} && claude --resume abcdef123456"
+
+    def test_open_in_terminal_starts_a_new_console(self, monkeypatch):
+        from loopprism.sessions import actions
+
+        calls = []
+        monkeypatch.setattr(actions.sys, "platform", "win32")
+        monkeypatch.setattr(actions.subprocess, "CREATE_NEW_CONSOLE", 16, raising=False)
+        monkeypatch.setattr(actions.subprocess, "Popen", lambda *a, **k: calls.append((a, k)))
+        actions.open_in_terminal('cd /d "C:\\a b" && claude --resume abcdef123456')
+        assert calls == [((f'cmd.exe /k cd /d "C:\\a b" && claude --resume abcdef123456',), {"creationflags": 16})]
+
+    def test_delete_sends_file_and_folder_to_the_recycle_bin(self, tmp_path, monkeypatch):
+        from loopprism.sessions import actions
+
+        root = tmp_path / "projects"
+        root.mkdir()
+        f = root / "s.jsonl"
+        f.write_text("{}")
+        (root / "s").mkdir()
+        calls = []
+        monkeypatch.setattr(actions.sys, "platform", "win32")
+        monkeypatch.setattr(actions.subprocess, "CREATE_NO_WINDOW", 1, raising=False)
+        monkeypatch.setattr(actions.subprocess, "run", lambda cmd, **k: calls.append((cmd, k)))
+        assert actions.trash(str(f), [str(root)]) == "Recycle Bin"
+        (cmd, kw), = calls
+        assert cmd[0] == "powershell.exe" and "SendToRecycleBin" in cmd[-1]
+        assert str(f) not in cmd[-1]  # the path goes through the environment, not the script
+        assert kw["env"]["LP_RECYCLE_FILE"] == str(f.resolve())
+        assert kw["env"]["LP_RECYCLE_DIR"] == str((root / "s").resolve())
+
+    def test_delete_still_refuses_paths_outside_the_session_folders(self, tmp_path, monkeypatch):
+        from loopprism.sessions import actions
+
+        outside = tmp_path / "other.jsonl"
+        outside.write_text("{}")
+        monkeypatch.setattr(actions.sys, "platform", "win32")
+        with pytest.raises(PermissionError):
+            actions.trash(str(outside), [str(tmp_path / "projects")])

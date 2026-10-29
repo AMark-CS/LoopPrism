@@ -1,27 +1,115 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #0a0a0f;
-  --color-foreground: #e4e4e7;
-  --color-card: #111118;
-  --color-card-foreground: #e4e4e7;
-  --color-popover: #111118;
-  --color-popover-foreground: #e4e4e7;
-  --color-primary: #7c3aed;
-  --color-primary-foreground: #fafafa;
-  --color-secondary: #1c1c27;
-  --color-secondary-foreground: #a1a1aa;
-  --color-muted: #27273a;
-  --color-muted-foreground: #71717a;
-  --color-accent: #27273a;
-  --color-accent-foreground: #e4e4e7;
-  --color-destructive: #ef4444;
-  --color-border: #27273a;
-  --color-ring: #7c3aed;
+  --color-background: var(--lp-background);
+  --color-foreground: var(--lp-foreground);
+  --color-card: var(--lp-card);
+  --color-card-foreground: var(--lp-card-foreground);
+  --color-popover: var(--lp-popover);
+  --color-popover-foreground: var(--lp-popover-foreground);
+  --color-primary: var(--lp-primary);
+  --color-primary-foreground: var(--lp-primary-foreground);
+  --color-secondary: var(--lp-secondary);
+  --color-secondary-foreground: var(--lp-secondary-foreground);
+  --color-muted: var(--lp-muted);
+  --color-muted-foreground: var(--lp-muted-foreground);
+  --color-accent: var(--lp-accent);
+  --color-accent-foreground: var(--lp-accent-foreground);
+  --color-destructive: var(--lp-destructive);
+  --color-border: var(--lp-border);
+  --color-ring: var(--lp-ring);
 
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
+}
+
+/* Palette. Dark is the default (the standalone dashboard stays dark); the desktop app opens the
+   dashboard with ?theme=auto, and main.tsx sets data-theme to follow the window's light/dark. */
+:root {
+  color-scheme: dark;
+  --lp-background: #0a0a0f;
+  --lp-foreground: #e4e4e7;
+  --lp-card: #111118;
+  --lp-card-foreground: #e4e4e7;
+  --lp-popover: #111118;
+  --lp-popover-foreground: #e4e4e7;
+  --lp-primary: #7c3aed;
+  --lp-primary-foreground: #fafafa;
+  --lp-secondary: #1c1c27;
+  --lp-secondary-foreground: #a1a1aa;
+  --lp-muted: #27273a;
+  --lp-muted-foreground: #71717a;
+  --lp-accent: #27273a;
+  --lp-accent-foreground: #e4e4e7;
+  --lp-destructive: #ef4444;
+  --lp-border: #27273a;
+  --lp-ring: #7c3aed;
+
+  /* secondary text, hover/focus fills, chart chrome */
+  --color-subtle: #a1a1aa;
+  --hover: #ffffff08;
+  --row-focus: #1b1740;
+  --tooltip-bg: #16161e;
+  --label-bg: #0a0a0fcc;
+  --flow-main: #c4b5fd;
+  --danger: #7f1d1d;
+  --danger-hover: #991b1b;
+
+  /* tinted chips: background + text per tone */
+  --tone-primary-bg: #2b2150; --tone-primary-fg: #b9a6ff;
+  --tone-ok-bg: #10301f;      --tone-ok-fg: #4ade80;
+  --tone-warn-bg: #33290d;    --tone-warn-fg: #fbbf24;
+  --tone-tool-bg: #3a2a0c;    --tone-tool-fg: #fbbf24;
+  --tone-error-bg: #3a1717;   --tone-error-fg: #f87171;
+  --tone-user-bg: #16264d;    --tone-user-fg: #7aa2f7;
+  --tone-think-bg: #3a1a35;   --tone-think-fg: #f0abfc;
+  --tone-model-bg: #0c2f3a;   --tone-model-fg: #67e8f9;
+  --tone-system-bg: #26262f;  --tone-system-fg: #a1a1aa;
+  --tone-event-bg: #1f1f28;   --tone-event-fg: #71717a;
+  --bubble-user-bg: #0f1a33;  --bubble-user-border: #27407a;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --lp-background: #f6f6fa;
+  --lp-foreground: #1b1b26;
+  --lp-card: #ffffff;
+  --lp-card-foreground: #1b1b26;
+  --lp-popover: #ffffff;
+  --lp-popover-foreground: #1b1b26;
+  --lp-primary: #6d3fe0;
+  --lp-primary-foreground: #ffffff;
+  --lp-secondary: #eeeef5;
+  --lp-secondary-foreground: #52525b;
+  --lp-muted: #dcdce8;
+  --lp-muted-foreground: #6a6a7e;
+  --lp-accent: #ececf6;
+  --lp-accent-foreground: #1b1b26;
+  --lp-destructive: #dc2626;
+  --lp-border: #dcdce8;
+  --lp-ring: #6d3fe0;
+
+  --color-subtle: #5a5a6e;
+  --hover: #0000000a;
+  --row-focus: #ece9fd;
+  --tooltip-bg: #ffffff;
+  --label-bg: #ffffffcc;
+  --flow-main: #7c3aed;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+
+  --tone-primary-bg: #ece9fd; --tone-primary-fg: #5b34c9;
+  --tone-ok-bg: #d9f3e4;      --tone-ok-fg: #16794a;
+  --tone-warn-bg: #fdf0cf;    --tone-warn-fg: #a15c07;
+  --tone-tool-bg: #fdf0cf;    --tone-tool-fg: #a15c07;
+  --tone-error-bg: #fde4e4;   --tone-error-fg: #b42323;
+  --tone-user-bg: #dde8fd;    --tone-user-fg: #1f4fc4;
+  --tone-think-bg: #f8e3f7;   --tone-think-fg: #9a1e93;
+  --tone-model-bg: #d4f1f7;   --tone-model-fg: #0b6b80;
+  --tone-system-bg: #e6e6ee;  --tone-system-fg: #52525b;
+  --tone-event-bg: #efeff5;   --tone-event-fg: #6a6a7e;
+  --bubble-user-bg: #eaf0fd;  --bubble-user-border: #b9cdf5;
 }
 
 :root {

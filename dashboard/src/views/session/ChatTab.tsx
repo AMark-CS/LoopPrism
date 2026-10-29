@@ -24,13 +24,13 @@ function ToolRow({ call, result }: { call: SessionEvent; result?: SessionEvent }
         className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs"
       >
         <ChevronRight className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
-        <span className="rounded bg-[#3a2a0c] px-1.5 py-0.5 font-mono text-[10px] text-[#fbbf24]">
+        <span className="rounded bg-[var(--tone-tool-bg)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--tone-tool-fg)]">
           {call.tool_name}
         </span>
         <span className="truncate font-mono text-[var(--color-muted-foreground)]">
           {summarizeInput(call)}
         </span>
-        {result?.is_error && <span className="ml-auto text-[10px] text-[#f87171]">error</span>}
+        {result?.is_error && <span className="ml-auto text-[10px] text-[var(--tone-error-fg)]">error</span>}
       </button>
       {open && (
         <div className="space-y-2 border-t border-[var(--color-border)] p-2.5">
@@ -88,9 +88,9 @@ export function ChatTab({ id }: { id: string }) {
                 return (
                   <div
                     key={i}
-                    className="rounded-lg border border-[#27407a] bg-[#0f1a33] p-3 text-sm whitespace-pre-wrap break-words text-[var(--color-foreground)]"
+                    className="rounded-lg border border-[var(--bubble-user-border)] bg-[var(--bubble-user-bg)] p-3 text-sm whitespace-pre-wrap break-words text-[var(--color-foreground)]"
                   >
-                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#7aa2f7]">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-user-fg)]">
                       User
                     </div>
                     {it.text}

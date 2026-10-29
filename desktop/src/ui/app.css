@@ -10,14 +10,70 @@
   --ok: #3ecf8e;
   --warn: #f0b429;
   --err: #f05d5d;
-  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  --nav-active: #24233a;
+  --accent-hover: #8d7ff5;
+  --line-strong: #3a3a4d;
+  --switch-off: #33334a;
+  --toast-bg: #2b2b3a;
+  --note-bg: #2a2540;
+  --note-fg: #cfc8ff;
+  --err-bg: #3a1f24;
+  --err-fg: #ffb4b4;
+  --pill-on-bg: #17372b;
+  --pill-warn-bg: #3a3015;
+  --welcome-from: #2a2550;
+  --welcome-to: #1d2440;
+  --welcome-line: #3a3470;
+  --welcome-fg: #b7b3e0;
+  font: 13px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   color-scheme: dark;
+}
+/* Light theme. The Theme setting drives Electron's nativeTheme, which is what this media query
+   reads, so "System" follows the OS and "Light"/"Dark" force it. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f6fa;
+    --panel: #ffffff;
+    --panel2: #eeeef5;
+    --line: #dcdce8;
+    --text: #1b1b26;
+    --muted: #6a6a7e;
+    --accent: #6c5ce7;
+    --accent2: #5a49d6;
+    --ok: #1a9461;
+    --warn: #b45309;
+    --err: #d63f3f;
+    --nav-active: #e6e3fb;
+    --accent-hover: #5a49d6;
+    --line-strong: #bdbdd0;
+    --switch-off: #c9c9da;
+    --toast-bg: #ffffff;
+    --note-bg: #ece9fd;
+    --note-fg: #4a3fb0;
+    --err-bg: #fde8e8;
+    --err-fg: #a12626;
+    --pill-on-bg: #d9f3e8;
+    --pill-warn-bg: #fdf0cf;
+    --welcome-from: #ebe8fd;
+    --welcome-to: #e2ecfb;
+    --welcome-line: #cfc8f5;
+    --welcome-fg: #4d4a78;
+    color-scheme: light;
+  }
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
+/* Thin scrollbars like the dashboard's, so Windows doesn't show its wide classic ones (macOS overlays them). */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 body { margin: 0; height: 100vh; display: flex; background: var(--bg); color: var(--text); overflow: hidden; }
 button, input { font: inherit; color: inherit; }
 .drag { -webkit-app-region: drag; height: 40px; }
+/* Only macOS hides the title bar (traffic lights sit over the sidebar); elsewhere the OS frame stays. */
+body:not(.os-darwin) .drag { display: none; }
+body:not(.os-darwin) .brand { padding-top: 16px; }
 
 .sidebar { width: 196px; flex: none; background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 0 12px 14px; }
 .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; padding: 4px 8px 16px; }
@@ -26,7 +82,8 @@ nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 nav button { display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 8px 10px; border-radius: 8px; color: var(--muted); cursor: pointer; text-align: left; }
 nav button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 nav button:hover { background: var(--panel2); color: var(--text); }
-nav button.active { background: #24233a; color: var(--accent2); }
+nav button.active { background: var(--nav-active); color: var(--accent2); }
+@media (prefers-color-scheme: light) { .badge { color: #fff; } }
 .badge { margin-left: auto; background: var(--warn); color: #000; border-radius: 9px; font-size: 10px; font-weight: 700; padding: 0 6px; }
 .proxy-box { border-top: 1px solid var(--line); padding: 12px 8px 0; display: flex; flex-direction: column; gap: 6px; }
 .proxy-state { display: flex; align-items: center; gap: 8px; color: var(--muted); }
@@ -52,19 +109,20 @@ h3 { margin: 0 0 4px; font-size: 13px; }
 .sub, .hint { color: var(--muted); margin: 0 0 16px; }
 .hint { margin: 0; font-size: 12px; }
 .cards { display: flex; flex-direction: column; gap: 10px; }
+#agent-note { margin-top: 12px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
 .agent { display: flex; align-items: center; gap: 14px; }
 .agent .info { flex: 1; min-width: 0; }
 .agent .title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
 .agent .desc { color: var(--muted); margin-top: 2px; }
-.agent .note { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: #2a2540; color: #cfc8ff; font-size: 12px; }
-.agent .err { background: #3a1f24; color: #ffb4b4; }
+.agent .note { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: var(--note-bg); color: var(--note-fg); font-size: 12px; }
+.agent .err { background: var(--err-bg); color: var(--err-fg); }
 .pill { font-size: 11px; font-weight: 500; padding: 1px 8px; border-radius: 10px; background: var(--panel2); color: var(--muted); }
-.pill.on { background: #17372b; color: var(--ok); }
-.pill.warn { background: #3a3015; color: var(--warn); }
-.welcome { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; background: linear-gradient(135deg, #2a2550, #1d2440); border: 1px solid #3a3470; }
+.pill.on { background: var(--pill-on-bg); color: var(--ok); }
+.pill.warn { background: var(--pill-warn-bg); color: var(--warn); }
+.welcome { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; background: linear-gradient(135deg, var(--welcome-from), var(--welcome-to)); border: 1px solid var(--welcome-line); }
 .welcome > div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.welcome span { color: #b7b3e0; }
+.welcome span { color: var(--welcome-fg); }
 
 .form { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
 label { display: flex; flex-direction: column; gap: 5px; color: var(--muted); font-size: 12px; }
@@ -76,16 +134,24 @@ code { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: va
 .copyrow code { flex: 1; padding: 8px 10px; border-radius: 8px; min-height: 34px; }
 .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .msg { color: var(--muted); margin-left: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; align-self: flex-start; }
+.seg label { flex-direction: row; gap: 0; position: relative; cursor: pointer; font-size: 13px; color: var(--muted); }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { padding: 7px 16px; border-right: 1px solid var(--line); }
+.seg label:last-child span { border-right: 0; }
+.seg label:hover span { color: var(--text); background: var(--panel2); }
+.seg input:checked + span { background: var(--nav-active); color: var(--accent2); font-weight: 500; }
+.seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: -2px; }
 .msg.bad { color: var(--err); }
 
 button.primary, button.ghost { border-radius: 8px; padding: 7px 14px; cursor: pointer; border: 1px solid transparent; }
 button.primary { background: var(--accent); color: #fff; font-weight: 500; }
-button.primary:hover { background: #8d7ff5; }
+button.primary:hover { background: var(--accent-hover); }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { background: var(--panel2); border-color: var(--line); color: var(--text); }
-button.ghost:hover { border-color: #3a3a4d; }
+button.ghost:hover { border-color: var(--line-strong); }
 
-.switch { appearance: none; width: 38px; height: 22px; flex: none; border-radius: 11px; background: #33334a; position: relative; cursor: pointer; transition: background 0.15s; border: 0; padding: 0; }
+.switch { appearance: none; width: 38px; height: 22px; flex: none; border-radius: 11px; background: var(--switch-off); position: relative; cursor: pointer; transition: background 0.15s; border: 0; padding: 0; }
 .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
 .switch:checked { background: var(--accent); }
 .switch:checked::after { transform: translateX(16px); }
@@ -93,13 +159,13 @@ button.ghost:hover { border-color: #3a3a4d; }
 .switchrow { flex-direction: row; align-items: center; justify-content: space-between; color: var(--text); font-size: 13px; }
 .switchrow small { display: block; color: var(--muted); font-size: 12px; }
 
-.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #2b2b3a; border: 1px solid var(--line); padding: 8px 14px; border-radius: 10px; z-index: 20; }
+.toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--toast-bg); border: 1px solid var(--line); padding: 8px 14px; border-radius: 10px; z-index: 20; }
 
 .note button { margin-left: 8px; padding: 3px 10px; }
 
 .update-box { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px; padding: 12px 8px 0; border-top: 1px solid var(--line); }
 .update-btn { width: 100%; border: 0; border-radius: 8px; padding: 8px 10px; background: var(--accent); color: #fff; font-weight: 500; cursor: pointer; text-align: center; }
-.update-btn:hover { background: #8d7ff5; }
+.update-btn:hover { background: var(--accent-hover); }
 .update-btn:disabled { background: var(--panel2); color: var(--muted); cursor: default; }
 .update-bar { height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
 .update-bar i { display: block; height: 100%; width: 0; background: var(--accent2); transition: width 0.2s; }
