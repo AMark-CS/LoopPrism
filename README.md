@@ -139,7 +139,7 @@ LoopPrism runs on **macOS** and **Windows** with the same features on both: the 
 | **Claude Code** | `~/.claude/projects` (also subagent trees) | yes, plugin | yes |
 | **Codex** | `~/.codex/sessions` | yes, `~/.codex/hooks.json` | yes |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | yes, a plugin in `~/.config/opencode/plugins` | read-only |
-| **DeepSeek Harness** (`dsh`) | `~/.dsh/sessions` (zstd), `$DSH_HOME` | yes, via its hook plugin (one manual step) | read-only |
+| **DeepSeek Harness** (`dsh`) | `~/.dsh/sessions` (zstd), `$DSH_HOME`, and DSH Desktop's own `dsh-desktop/harness/sessions` in its app-data folder | yes, via its hook plugin (one manual step) | read-only |
 | **WorkBuddy** | `~/.workbuddy/projects`, `$WORKBUDDY_CONFIG_DIR` | yes, `~/.workbuddy/settings.json` | read-only |
 
 Cost is priced from each model's published pay-as-you-go API price (cache reads and writes
@@ -194,7 +194,7 @@ lpa status                # newest runs
 
 Claude Code can also use the plugin directly (`/plugin marketplace add AMark-CS/LoopPrism`, then
 `/plugin install loopprism@loopprism`). In Codex, run `/hooks` once to trust the hooks; restart
-WorkBuddy and OpenCode after installing (OpenCode gets a one-file plugin). DeepSeek Harness sessions are read from `~/.dsh` (or `$DSH_HOME`), and
+WorkBuddy and OpenCode after installing (OpenCode gets a one-file plugin). DeepSeek Harness sessions are read from `~/.dsh` (or `$DSH_HOME`) and from DSH Desktop's own data folder, and
 WorkBuddy's from `~/.workbuddy` (or `$WORKBUDDY_CONFIG_DIR`), and OpenCode's from its database, with
 nothing to set up. For live runs, DeepSeek Harness needs one manual step: `lpa install dsh` writes `~/.loopprism/dsh-hooks.json`; in DSH Desktop install the plugin `dsh-hooks-claude-code`, set its `configPath` to that file and restart. Privacy options and uninstall: [npm/README.md](npm/README.md).
 

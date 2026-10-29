@@ -35,7 +35,7 @@ READ_ONLY_AGENTS = {"dsh", "workbuddy", "opencode"}
 
 
 def default_roots() -> dict[str, str]:
-    return {"claude-code": claude_root(), "codex": codex_root(), "dsh": dsh.dsh_root(), "workbuddy": workbuddy.workbuddy_root(), "opencode": opencode.opencode_db()}
+    return {"claude-code": claude_root(), "codex": codex_root(), "dsh": dsh.dsh_root(), "dsh-desktop": dsh.desktop_root(), "workbuddy": workbuddy.workbuddy_root(), "opencode": opencode.opencode_db()}
 
 
 class SessionStore:
@@ -109,7 +109,8 @@ class SessionStore:
         if self.roots.get("opencode"):
             self._sigs = opencode.discover(self.roots["opencode"])
             found += [(p, "opencode") for p in self._sigs]
-        found += [(p, "dsh") for p in dsh.discover(self.roots["dsh"])] if self.roots.get("dsh") else []
+        for key in ("dsh", "dsh-desktop"):  # the CLI's folder, and DSH Desktop's own
+            found += [(p, "dsh") for p in dsh.discover(self.roots[key])] if self.roots.get(key) else []
         found += [(p, "workbuddy") for p in workbuddy.discover(self.roots["workbuddy"])] if self.roots.get("workbuddy") else []
         return found
 

@@ -131,3 +131,9 @@ def mock_mcp_backend():
     yield f"http://127.0.0.1:{port}"
 
     server.shutdown()
+
+
+@pytest.fixture(autouse=True)
+def _no_real_dsh_desktop(tmp_path_factory, monkeypatch):
+    """Never read the developer's own DSH Desktop sessions in a test."""
+    monkeypatch.setenv("DSH_DESKTOP_HOME", str(tmp_path_factory.mktemp("dsh-desktop")))
