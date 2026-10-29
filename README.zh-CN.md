@@ -65,8 +65,8 @@ LoopPrism 支持 **macOS** 和 **Windows**，两个平台功能一致。
 |---|---|---|---|
 | **Claude Code** | `~/.claude/projects`（含子代理） | 支持，插件 | 支持 |
 | **Codex** | `~/.codex/sessions` | 支持，`~/.codex/hooks.json` | 支持 |
-| **OpenCode** | `~/.local/share/opencode/opencode.db` | 暂不支持 | 只读 |
-| **DeepSeek Harness**（`dsh`） | `~/.dsh/sessions`（zstd），`$DSH_HOME` | 暂不支持 | 只读 |
+| **OpenCode** | `~/.local/share/opencode/opencode.db` | 支持，插件 `~/.config/opencode/plugins` | 只读 |
+| **DeepSeek Harness**（`dsh`） | `~/.dsh/sessions`（zstd），`$DSH_HOME` | 支持，经其钩子插件（需手动一步） | 只读 |
 | **WorkBuddy** | `~/.workbuddy/projects`，`$WORKBUDDY_CONFIG_DIR` | 支持，`~/.workbuddy/settings.json` | 只读 |
 
 花费按各模型公开的按量 API 价格计算（缓存读写分别计价）。内置：**Claude**、**OpenAI**（GPT-6、GPT-5、Codex 系列）、**DeepSeek**、**MiniMax**、**GLM**（4.5 到 5.x）、**Qwen**、**Kimi**、**Gemini**，以及 OpenCode Zen 的 `-free` 免费模型。较新的版本按同系列已知的最新价格估算；没有价格的模型显示“无价格”，不计入总额。可在 `~/.loopprism/pricing.json` 中自定义或修正任意价格。花费是“按 API 计价的估算”，订阅和免费额度的实际计费不同。
@@ -87,14 +87,14 @@ pip install "git+https://github.com/AMark-CS/LoopPrism.git"
 lprism proxy        # 然后打开 http://localhost:8080
 ```
 
-### 为 Claude Code、Codex、WorkBuddy 开启实时运行
+### 为 Claude Code、Codex、WorkBuddy、OpenCode、DeepSeek Harness 开启实时运行
 
 ```bash
 npx loopprism install     # 为你已安装的应用添加 hooks
 lpa status                # 查看最新运行
 ```
 
-Codex 安装后需运行一次 `/hooks` 以信任这些 hooks；WorkBuddy 安装后需重启。详见 [npm/README.md](npm/README.md)。
+Codex 安装后需运行一次 `/hooks` 以信任这些 hooks；WorkBuddy 和 OpenCode 安装后需重启（OpenCode 装的是一个单文件插件）。DeepSeek Harness 需要多一步手动：`lpa install dsh` 会生成 `~/.loopprism/dsh-hooks.json`，再在 DSH Desktop 里安装插件 `dsh-hooks-claude-code`，把它的 `configPath` 设为该文件并重启。详见 [npm/README.md](npm/README.md)。
 
 ## 许可证
 

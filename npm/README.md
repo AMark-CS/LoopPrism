@@ -1,11 +1,11 @@
-# LoopPrism for Claude Code, Codex and WorkBuddy
+# LoopPrism for Claude Code, Codex, WorkBuddy and OpenCode
 
 Records every prompt, tool call and error from your coding agent as **runs** in
 [LoopPrism](https://github.com/AMark-CS/LoopPrism), so you can see what the agent
 actually did: built-in tools and shell commands included, not only MCP calls.
 
 ```bash
-npx loopprism install          # Claude Code, Codex and/or WorkBuddy, whichever is installed
+npx loopprism install          # Claude Code, Codex, WorkBuddy and/or OpenCode, whichever is installed
 ```
 
 or install once and use the short command:
@@ -17,8 +17,8 @@ lpa install
 
 | Command | What it does |
 |---|---|
-| `lpa install [claude\|codex\|workbuddy\|all]` | Add the hooks. Claude Code gets a plugin (`/loopprism:status`, `/loopprism:open`); Codex gets entries in `~/.codex/hooks.json`; WorkBuddy gets entries in the `hooks` key of `~/.workbuddy/settings.json` (a copy of the original is kept next to it as `settings.json.loopprism.bak`). |
-| `lpa uninstall [claude\|codex\|workbuddy\|all]` | Remove them. Other hooks in your config are left alone. |
+| `lpa install [claude\|codex\|workbuddy\|opencode\|dsh\|all]` | Add the hooks. Claude Code gets a plugin (`/loopprism:status`, `/loopprism:open`); Codex gets entries in `~/.codex/hooks.json`; WorkBuddy gets entries in the `hooks` key of `~/.workbuddy/settings.json` (a copy of the original is kept next to it as `settings.json.loopprism.bak`); OpenCode gets one plugin file, `~/.config/opencode/plugins/loopprism.js` (or under `$OPENCODE_CONFIG_DIR`). |
+| `lpa uninstall [claude\|codex\|workbuddy\|opencode\|dsh\|all]` | Remove them. Other hooks in your config are left alone. |
 | `lpa status` | Is LoopPrism up? The newest runs. |
 | `lpa open` | Open the desktop app, or the dashboard in your browser. |
 
@@ -27,6 +27,8 @@ You also need LoopPrism running to receive the events: the desktop app, or `lpri
 ## Notes
 
 - **Codex asks you to trust new hooks.** After `lpa install`, open Codex and run `/hooks` once to review and trust them.
+- **DeepSeek Harness:** `lpa install dsh` only writes `~/.loopprism/dsh-hooks.json`; it never edits DSH's own profile. In DSH Desktop install the plugin `dsh-hooks-claude-code`, set its `configPath` to that file, and restart. The bridge supports session start, prompt, tool and stop events (no tool failures).
+- **OpenCode:** restart it after `lpa install` so it loads the plugin. Uninstall removes only the file LoopPrism wrote.
 - **WorkBuddy:** restart it after `lpa install` so it reads the hooks. They run `node`, so Node.js must be on the PATH WorkBuddy uses. `WORKBUDDY_CONFIG_DIR` points `lpa` at a different WorkBuddy folder.
 - **Claude Code without npm:** `/plugin marketplace add AMark-CS/LoopPrism`, then `/plugin install loopprism@loopprism`.
 - **It never slows your agent.** The hook gives up after one second, backs off for ten seconds after a failure, always exits 0, and does nothing when LoopPrism is not running.

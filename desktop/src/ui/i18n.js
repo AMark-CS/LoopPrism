@@ -73,8 +73,6 @@
     "just now": "刚刚",
     "Read from disk": "从磁盘读取",
     "{n} sessions": "{n} 个会话",
-    "Its sessions are read from OpenCode's own database (~/.local/share/opencode). Nothing to set up.": "它的会话直接从 OpenCode 自己的数据库(~/.local/share/opencode)读取,无需设置。",
-    "Its sessions are read from the files DeepSeek Harness keeps on disk. Nothing to set up, and no live-run hook yet.": "它的会话直接从 DeepSeek Harness 保存在磁盘上的文件读取,无需设置,暂无实时钩子。",
     "{n} min ago": "{n} 分钟前",
     "{n} h ago": "{n} 小时前",
     "{n} d ago": "{n} 天前",
@@ -101,6 +99,10 @@
     "Records every prompt, tool call and error as a run. Adds hooks to ~/.codex/hooks.json.":
       "把每条提示词、工具调用和错误记录为一次运行。会在 ~/.codex/hooks.json 中添加钩子。",
     "Restart running Claude Code sessions to start recording.": "重启正在运行的 Claude Code 会话以开始记录。",
+    "Records every prompt and tool call as a run. Adds a plugin to ~/.config/opencode/plugins.": "把每条提示词和工具调用记录为一次运行。会在 ~/.config/opencode/plugins 中添加插件。",
+    "Records every prompt and tool call as a run. Writes a hooks file (~/.loopprism/dsh-hooks.json) for DeepSeek Harness's own hook plugin.": "把每条提示词和工具调用记录为一次运行。会生成一个钩子文件(~/.loopprism/dsh-hooks.json),交给 DeepSeek Harness 自带的钩子插件使用。",
+    "In DSH Desktop, install the plugin dsh-hooks-claude-code, set its configPath to ~/.loopprism/dsh-hooks.json, and restart it.": "在 DSH Desktop 中安装插件 dsh-hooks-claude-code,把它的 configPath 设为 ~/.loopprism/dsh-hooks.json,然后重启。",
+    "Restart OpenCode so it loads the plugin.": "重启 OpenCode 以加载插件。",
     "Restart WorkBuddy so it picks up the hooks.": "重启 WorkBuddy 以加载钩子。",
     "Open Codex and run /hooks once to review and trust the LoopPrism hooks.":
       "打开 Codex 并运行一次 /hooks,以审查并信任 LoopPrism 的钩子。",
