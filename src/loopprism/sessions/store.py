@@ -285,9 +285,15 @@ class SessionStore:
         with self._lock:
             return [self._row(r) for r in self._db.execute(sql, params)]
 
-    def count(self) -> int:
+    def count(self, agent: Optional[str] = None) -> int:
         with self._lock:
+            if agent:
+                return self._db.execute("SELECT COUNT(*) FROM sessions WHERE agent = ?", (agent,)).fetchone()[0]
             return self._db.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
+
+    def counts_by_agent(self) -> dict[str, int]:
+        with self._lock:
+            return {a: n for a, n in self._db.execute("SELECT agent, COUNT(*) FROM sessions GROUP BY agent")}
 
     def projects(self) -> list[dict[str, Any]]:
         with self._lock:

@@ -3,17 +3,18 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recha
 import { useCostOverview, useOptimize } from '../hooks/useSessions';
 import { Card, Empty } from '../components/ui';
 import { formatTokens, formatUsd } from '../lib/format';
+import { t } from '../lib/i18n';
 import type { CostRow } from '../types/sessions';
 
 const RANGES = [
-  { days: 7, label: '7 days' },
-  { days: 30, label: '30 days' },
-  { days: 90, label: '90 days' },
-  { days: 0, label: 'All time' },
+  { days: 7, label: t('7 days') },
+  { days: 30, label: t('30 days') },
+  { days: 90, label: t('90 days') },
+  { days: 0, label: t('All time') },
 ] as const;
 
 const AGENTS: [string, string][] = [
-  ['', 'All agents'],
+  ['', t('All agents')],
   ['claude-code', 'Claude Code'],
   ['codex', 'Codex'],
   ['dsh', 'DeepSeek Harness'],
@@ -24,7 +25,7 @@ const AGENT_LABEL = Object.fromEntries(AGENTS);
 
 const totalIn = (r: Pick<CostRow, 'input' | 'cache_read' | 'cache_write'>) => r.input + r.cache_read + r.cache_write;
 const money = (v: number | null | undefined) => (v == null ? '—' : formatUsd(v));
-const projectName = (p: string) => (p ? p.split(/[\\/]/).filter(Boolean).pop() ?? p : 'No project');
+const projectName = (p: string) => (p ? p.split(/[\\/]/).filter(Boolean).pop() ?? p : t('No project'));
 
 /** One bar per calendar day of the period, so quiet days show as gaps instead of vanishing. */
 function perDay(rows: CostRow[], days: number) {
@@ -63,11 +64,11 @@ function Breakdown({ rows, label, empty }: { rows: CostRow[]; label: (k: string)
             <span className="min-w-0 truncate" title={label(r.key)}>{label(r.key)}</span>
             <span className="shrink-0 tabular-nums">
               {r.cost == null ? (
-                <span className="text-[var(--color-muted-foreground)]">no price · {formatTokens(totalIn(r) + r.output)} tok</span>
+                <span className="text-[var(--color-muted-foreground)]">{t('no price · {n} tok', { n: formatTokens(totalIn(r) + r.output) })}</span>
               ) : (
                 <>
                   {formatUsd(r.cost)}
-                  <span className="ml-2 text-[var(--color-muted-foreground)]">{formatTokens(totalIn(r) + r.output)} tok</span>
+                  <span className="ml-2 text-[var(--color-muted-foreground)]">{t('{n} tok', { n: formatTokens(totalIn(r) + r.output) })}</span>
                 </>
               )}
             </span>
@@ -92,19 +93,18 @@ export function CostView() {
       active ? 'border-[var(--color-primary)] text-[var(--color-foreground)]' : 'border-[var(--color-border)] text-[var(--color-muted-foreground)]'
     }`;
 
-  const t = data?.totals;
-  const input = t ? totalIn(t) : 0;
-  const cacheHit = t && input ? (100 * t.cache_read) / input : null;
-  const hasData = !!t && (t.steps ?? 0) > 0;
+  const tt = data?.totals;
+  const input = tt ? totalIn(tt) : 0;
+  const cacheHit = tt && input ? (100 * tt.cache_read) / input : null;
+  const hasData = !!tt && (tt.steps ?? 0) > 0;
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
         <div>
-          <h1 className="text-lg font-semibold">Cost</h1>
+          <h1 className="text-lg font-semibold">{t('Cost')}</h1>
           <p className="text-xs text-[var(--color-muted-foreground)]">
-            Every session of every agent on this computer, priced at API list prices. An estimate of what the work would cost on the API:
-            subscriptions and free tiers bill differently.
+            {t('Every session of every agent on this computer, priced at API list prices. An estimate of what the work would cost on the API: subscriptions and free tiers bill differently.')}
           </p>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
@@ -119,34 +119,34 @@ export function CostView() {
         ))}
       </div>
 
-      {isLoading && <Empty>Adding up your sessions…</Empty>}
+      {isLoading && <Empty>{t('Adding up your sessions…')}</Empty>}
       {!isLoading && !hasData && (
-        <Empty>No sessions with token usage in this period{agent ? ` for ${AGENT_LABEL[agent]}` : ''}.</Empty>
+        <Empty>{agent ? t('No sessions with token usage in this period for {agent}.', { agent: AGENT_LABEL[agent] }) : t('No sessions with token usage in this period.')}</Empty>
       )}
 
-      {hasData && t && data && (
+      {hasData && tt && data && (
         <>
           {!!data.pending && (
-            <div className="text-[11px] text-[var(--color-muted-foreground)]">Still reading {data.pending} sessions; the totals grow as they are indexed.</div>
+            <div className="text-[11px] text-[var(--color-muted-foreground)]">{t('Still reading {n} sessions; the totals grow as they are indexed.', { n: data.pending })}</div>
           )}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
-            <Tile label="Estimated spend" value={money(t.cost)} hint={t.unpriced_steps ? `${t.unpriced_steps} calls have no price` : 'all calls priced'} />
-            <Tile label="Sessions" value={t.sessions.toLocaleString()} hint={`${t.steps.toLocaleString()} model calls`} />
-            <Tile label="Input tokens" value={formatTokens(input)} hint={`${formatTokens(t.input)} uncached`} />
-            <Tile label="Output tokens" value={formatTokens(t.output)} />
-            <Tile label="Cache hit" value={cacheHit == null ? '—' : `${cacheHit.toFixed(1)}%`} hint="of input read from cache" />
-            <Tile label="Per session" value={t.cost != null && t.sessions ? formatUsd(t.cost / t.sessions) : '—'} hint="average" />
+            <Tile label={t('Estimated spend')} value={money(tt.cost)} hint={tt.unpriced_steps ? t('{n} calls have no price', { n: tt.unpriced_steps }) : t('all calls priced')} />
+            <Tile label={t('Sessions')} value={tt.sessions.toLocaleString()} hint={t('{n} model calls', { n: tt.steps.toLocaleString() })} />
+            <Tile label={t('Input tokens')} value={formatTokens(input)} hint={t('{n} uncached', { n: formatTokens(tt.input) })} />
+            <Tile label={t('Output tokens')} value={formatTokens(tt.output)} />
+            <Tile label={t('Cache hit')} value={cacheHit == null ? '—' : `${cacheHit.toFixed(1)}%`} hint={t('of input read from cache')} />
+            <Tile label={t('Per session')} value={tt.cost != null && tt.sessions ? formatUsd(tt.cost / tt.sessions) : '—'} hint={t('average')} />
           </div>
 
           {opt && opt.suggestions.length > 0 && (
             <a href="#/optimize" className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-[var(--color-primary)] bg-[var(--tone-primary-bg)] px-4 py-3 text-sm hover:opacity-90">
-              <span className="font-medium text-[var(--tone-primary-fg)]">{opt.suggestions.length} way{opt.suggestions.length > 1 ? 's' : ''} to spend less</span>
-              <span className="text-[var(--color-foreground)]">about {formatUsd(opt.saving_usd)} (−{opt.saving_pct}%) in this period</span>
-              <span className="ml-auto text-xs text-[var(--tone-primary-fg)]">See the suggestions →</span>
+              <span className="font-medium text-[var(--tone-primary-fg)]">{t(opt.suggestions.length > 1 ? '{n} ways to spend less' : '{n} way to spend less', { n: opt.suggestions.length })}</span>
+              <span className="text-[var(--color-foreground)]">{t('about {c} (−{p}%) in this period', { c: formatUsd(opt.saving_usd), p: opt.saving_pct })}</span>
+              <span className="ml-auto text-xs text-[var(--tone-primary-fg)]">{t('See the suggestions →')}</span>
             </a>
           )}
 
-          <Card title="Spend per day">
+          <Card title={t('Spend per day')}>
             <div className="h-48">
               <ResponsiveContainer>
                 <BarChart data={perDay(data.by_day, days)} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -155,7 +155,7 @@ export function CostView() {
                   <Tooltip
                     cursor={{ fill: 'var(--hover)' }}
                     contentStyle={{ background: 'var(--tooltip-bg)', border: '1px solid var(--color-border)', fontSize: 11 }}
-                    formatter={(v) => [formatUsd(Number(v)), 'Spend']}
+                    formatter={(v) => [formatUsd(Number(v)), t('Spend')]}
                   />
                   <Bar dataKey="cost" fill="#8b5cf6" radius={[2, 2, 0, 0]} isAnimationActive={false} />
                 </BarChart>
@@ -164,23 +164,23 @@ export function CostView() {
           </Card>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card title="By model">
-              <Breakdown rows={data.by_model.slice(0, 12)} label={(k) => k} empty="No models." />
+            <Card title={t('By model')}>
+              <Breakdown rows={data.by_model.slice(0, 12)} label={(k) => k} empty={t('No models.')} />
               {data.unpriced_models.length > 0 && (
                 <p className="mt-3 text-[11px] text-[var(--color-muted-foreground)]">
-                  No price for {data.unpriced_models.join(', ')}. Add one in <code>~/.loopprism/pricing.json</code> and it is counted.
+                  {t('No price for {models}. Add one in', { models: data.unpriced_models.join(', ') })} <code>~/.loopprism/pricing.json</code> {t('and it is counted.')}
                 </p>
               )}
             </Card>
-            <Card title="By agent">
-              <Breakdown rows={data.by_agent} label={(k) => AGENT_LABEL[k] ?? k} empty="No agents." />
+            <Card title={t('By agent')}>
+              <Breakdown rows={data.by_agent} label={(k) => AGENT_LABEL[k] ?? k} empty={t('No agents.')} />
             </Card>
-            <Card title="By project">
-              <Breakdown rows={data.by_project} label={(k) => projectName(k)} empty="No projects." />
+            <Card title={t('By project')}>
+              <Breakdown rows={data.by_project} label={(k) => projectName(k)} empty={t('No projects.')} />
             </Card>
-            <Card title="Most expensive sessions">
+            <Card title={t('Most expensive sessions')}>
               {data.top_sessions.length === 0 ? (
-                <div className="text-xs text-[var(--color-muted-foreground)]">No priced sessions.</div>
+                <div className="text-xs text-[var(--color-muted-foreground)]">{t('No priced sessions.')}</div>
               ) : (
                 <div className="space-y-1.5">
                   {data.top_sessions.map((s) => (
@@ -200,7 +200,7 @@ export function CostView() {
         </>
       )}
       <div className="pb-2 text-[11px] text-[var(--color-muted-foreground)]">
-        Runs recorded by the proxy and the hooks, including MCP tool calls: <a className="text-[var(--color-primary)] underline" href="#/live">open the run viewer</a>.
+        {t('Runs recorded by the proxy and the hooks, including MCP tool calls:')} <a className="text-[var(--color-primary)] underline" href="#/live">{t('open the run viewer')}</a>.
       </div>
     </div>
   );

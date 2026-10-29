@@ -1,5 +1,6 @@
 /** API client for the loopprism backend. */
 import type * as S from '../types/sessions';
+import { lang } from './i18n';
 
 const BASE = '';
 
@@ -87,9 +88,9 @@ export const api = {
   },
   aiPreview: (days: number, agent?: string) =>
     post<{ endpoint: string | null; model: string; ready: boolean; messages: { role: string; content: string }[] }>(
-      `/api/sessions/optimize/ai/preview?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}&language=${navigator.language.startsWith('zh') ? 'zh' : 'en'}`),
+      `/api/sessions/optimize/ai/preview?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}&language=${lang}`),
   aiRun: (days: number, agent?: string) =>
-    post<{ text: string }>(`/api/sessions/optimize/ai/run?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}&language=${navigator.language.startsWith('zh') ? 'zh' : 'en'}`),
+    post<{ text: string }>(`/api/sessions/optimize/ai/run?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}&language=${lang}`),
   costOverview: (days: number, agent?: string) =>
     get<S.CostOverview>(`/api/sessions/cost/overview?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}`),
   listSessions: (params: { q?: string; agent?: string; project?: string }) => {

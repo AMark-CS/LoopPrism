@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Check, Copy } from 'lucide-react';
+import { t } from '../lib/i18n';
 
 export function Card({
   title,
@@ -33,7 +34,7 @@ export function Badge({
   title,
 }: {
   children: ReactNode;
-  tone?: 'muted' | 'primary' | 'ok' | 'warn' | 'error';
+  tone?: 'muted' | 'primary' | 'ok' | 'warn' | 'error' | 'violet';
   title?: string;
 }) {
   const tones = {
@@ -42,6 +43,7 @@ export function Badge({
     ok: 'bg-[var(--tone-ok-bg)] text-[var(--tone-ok-fg)]',
     warn: 'bg-[var(--tone-warn-bg)] text-[var(--tone-warn-fg)]',
     error: 'bg-[var(--tone-error-bg)] text-[var(--tone-error-fg)]',
+    violet: 'bg-[var(--tone-think-bg)] text-[var(--tone-think-fg)]',
   };
   return (
     <span
@@ -53,7 +55,7 @@ export function Badge({
   );
 }
 
-export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+export function CopyButton({ text, label = t('Copy') }: { text: string; label?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -66,7 +68,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
       className="inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)] hover:text-[var(--color-foreground)]"
     >
       {done ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-      {done ? 'Copied' : label}
+      {done ? t('Copied') : label}
     </button>
   );
 }

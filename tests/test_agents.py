@@ -111,6 +111,13 @@ async def api(collector, home):
 
 class TestApi:
     @pytest.mark.asyncio
+    async def test_list_counts_per_agent(self, api):
+        body = (await api.get("/api/sessions")).json()
+        assert body["by_agent"] == {"claude-code": body["total"]}
+        other = (await api.get("/api/sessions?agent=codex")).json()
+        assert other["total"] == 0 and other["by_agent"] == body["by_agent"]
+
+    @pytest.mark.asyncio
     async def test_agents_endpoint(self, api):
         sid = (await api.get("/api/sessions")).json()["sessions"][0]["id"]
         r = await api.get(f"/api/sessions/{sid}/agents")

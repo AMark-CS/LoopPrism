@@ -8,6 +8,7 @@ const { atomicWrite } = require("./fsutil");
 const AGENTS = [
   {
     id: "claude",
+    sessionAgent: "claude-code",
     name: "Claude Code",
     blurb:
       "Records every prompt, tool call and error as a run. Installs the LoopPrism plugin through the claude CLI.",
@@ -27,6 +28,22 @@ const AGENTS = [
       "Records every prompt, tool call and error as a run. Adds hooks to ~/.codex/hooks.json.",
     afterConnect:
       "Open Codex and run /hooks once to review and trust the LoopPrism hooks.",
+  },
+];
+
+// Read from their own files on disk: nothing to connect, so no switch.
+const READ_ONLY = [
+  {
+    id: "opencode",
+    name: "OpenCode",
+    readOnly: true,
+    blurb: "Its sessions are read from OpenCode's own database (~/.local/share/opencode). Nothing to set up.",
+  },
+  {
+    id: "dsh",
+    name: "DeepSeek Harness",
+    readOnly: true,
+    blurb: "Its sessions are read from the files DeepSeek Harness keeps on disk. Nothing to set up, and no live-run hook yet.",
   },
 ];
 
@@ -225,4 +242,4 @@ function pointHooksHere(dashboardUrl) {
   }
 }
 
-module.exports = { bundleHash, AGENTS, status, connect, disconnect, lastSeen, syncHookUrl, hookTarget, pointHooksHere };
+module.exports = { bundleHash, AGENTS, READ_ONLY, status, connect, disconnect, lastSeen, syncHookUrl, hookTarget, pointHooksHere };

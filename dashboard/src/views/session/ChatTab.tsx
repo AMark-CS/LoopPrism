@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Empty } from '../../components/ui';
+import { t } from '../../lib/i18n';
 import type { SessionEvent } from '../../types/sessions';
 
 function summarizeInput(e: SessionEvent): string {
@@ -30,7 +31,7 @@ function ToolRow({ call, result }: { call: SessionEvent; result?: SessionEvent }
         <span className="truncate font-mono text-[var(--color-muted-foreground)]">
           {summarizeInput(call)}
         </span>
-        {result?.is_error && <span className="ml-auto text-[10px] text-[var(--tone-error-fg)]">error</span>}
+        {result?.is_error && <span className="ml-auto text-[10px] text-[var(--tone-error-fg)]">{t('error')}</span>}
       </button>
       {open && (
         <div className="space-y-2 border-t border-[var(--color-border)] p-2.5">
@@ -74,15 +75,15 @@ export function ChatTab({ id }: { id: string }) {
     return out;
   }, [data]);
 
-  if (isLoading) return <Empty>Loading conversation…</Empty>;
-  if (!turns.length) return <Empty>No messages in this session.</Empty>;
+  if (isLoading) return <Empty>{t('Loading conversation…')}</Empty>;
+  if (!turns.length) return <Empty>{t('No messages in this session.')}</Empty>;
 
   return (
     <div className="flex min-h-0 flex-1">
       <div className="flex-1 space-y-6 overflow-y-auto p-5">
-        {turns.map((t, ti) => (
+        {turns.map((tn, ti) => (
           <div key={ti} id={`turn-${ti}`} className="space-y-2">
-            {t.items.map((it, i) => {
+            {tn.items.map((it, i) => {
               if ('call' in it) return <ToolRow key={i} call={it.call} result={it.result} />;
               if (it.kind === 'user') {
                 return (
@@ -91,7 +92,7 @@ export function ChatTab({ id }: { id: string }) {
                     className="rounded-lg border border-[var(--bubble-user-border)] bg-[var(--bubble-user-bg)] p-3 text-sm whitespace-pre-wrap break-words text-[var(--color-foreground)]"
                   >
                     <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--tone-user-fg)]">
-                      User
+                      {t('User')}
                     </div>
                     {it.text}
                   </div>
@@ -108,10 +109,10 @@ export function ChatTab({ id }: { id: string }) {
       </div>
       <nav className="hidden w-56 shrink-0 overflow-y-auto border-l border-[var(--color-border)] p-3 xl:block">
         <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-          Contents
+          {t('Contents')}
         </div>
-        {turns.map((t, ti) => {
-          const first = t.items.find((x) => 'kind' in x && x.kind === 'user') as SessionEvent | undefined;
+        {turns.map((tn, ti) => {
+          const first = tn.items.find((x) => 'kind' in x && x.kind === 'user') as SessionEvent | undefined;
           return (
             <button
               key={ti}
@@ -120,7 +121,7 @@ export function ChatTab({ id }: { id: string }) {
               className="flex w-full gap-2 py-1 text-left text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
             >
               <span className="shrink-0 tabular-nums opacity-60">{ti + 1}</span>
-              <span className="truncate">{first?.text.slice(0, 60) || '(no prompt)'}</span>
+              <span className="truncate">{first?.text.slice(0, 60) || t('(no prompt)')}</span>
             </button>
           );
         })}

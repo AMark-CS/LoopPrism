@@ -121,6 +121,13 @@
       are not read yet.)
     </td>
   </tr>
+  <tr>
+    <td colspan="2" valign="top">
+      <h4>🎨 Look &amp; language</h4>
+      Dark, light or follow-the-system theme, and an interface in English or 简体中文 (or follow the
+      system). Both are chosen in Settings and apply to the whole app, including the dashboard.
+    </td>
+  </tr>
 </table>
 
 ## Supported apps and models

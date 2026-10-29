@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useAgents } from '../../hooks/useSessions';
 import { useRoute } from '../../lib/route';
 import { Badge, Button, Card, Empty } from '../../components/ui';
+import { t, tServer } from '../../lib/i18n';
 import { formatMs, formatTokens, formatUsd } from '../../lib/format';
 import { layoutAgents, MAIN_COLOR } from '../../lib/agentLayout';
 import type { Placed } from '../../lib/agentLayout';
@@ -43,10 +44,10 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
 
 export function AgentsTab({ id }: { id: string }) {
   const { data, isLoading, error } = useAgents(id);
-  if (isLoading) return <Empty>Reading subagent transcripts…</Empty>;
-  if (error || !data) return <Empty>Could not read the agent tree.</Empty>;
-  if (!data.supported) return <Empty>{data.reason}</Empty>;
-  if (data.totals.subagents === 0) return <Empty>This session did not spawn any subagents.</Empty>;
+  if (isLoading) return <Empty>{t('Reading subagent transcripts…')}</Empty>;
+  if (error || !data) return <Empty>{t('Could not read the agent tree.')}</Empty>;
+  if (!data.supported) return <Empty>{data.reason ? tServer(data.reason) : ''}</Empty>;
+  if (data.totals.subagents === 0) return <Empty>{t('This session did not spawn any subagents.')}</Empty>;
   return <Tree id={id} tree={data} />;
 }
 
@@ -54,24 +55,24 @@ function Tree({ id, tree }: { id: string; tree: NonNullable<ReturnType<typeof us
   const layout = useMemo(() => layoutAgents(tree.agents), [tree.agents]);
   const [selected, setSelected] = useState<string>(() => tree.agents.find((a) => a.parent_id !== null)?.id ?? 'main');
   const [playing, setPlaying] = useState(true);
-  if (!layout) return <Empty>No agents found.</Empty>;
-  const t = tree.totals;
+  if (!layout) return <Empty>{t('No agents found.')}</Empty>;
+  const tot = tree.totals;
   const all = [layout.main, ...layout.placed];
-  const costTotal = t.total_cost_usd ?? 0;
+  const costTotal = tot.total_cost_usd ?? 0;
   const current = all.find((p) => p.agent.id === selected) ?? layout.main;
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-      <Card title="Agent summary">
+      <Card title={t('Agent summary')}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label="Subagents" value={String(t.subagents)} />
-          <Stat label="Peak parallel" value={String(t.peak_parallel)} hint="Most subagents running at the same moment" />
+          <Stat label={t('Subagents')} value={String(tot.subagents)} />
+          <Stat label={t('Peak parallel')} value={String(tot.peak_parallel)} hint={t('Most subagents running at the same moment')} />
           <Stat
-            label="Subagent cost"
-            value={t.subagent_cost_usd != null ? formatUsd(t.subagent_cost_usd) : '—'}
-            hint="Estimated at current API prices; models without a published price are not counted"
+            label={t('Subagent cost')}
+            value={tot.subagent_cost_usd != null ? formatUsd(tot.subagent_cost_usd) : '—'}
+            hint={t('Estimated at current API prices; models without a published price are not counted')}
           />
-          <Stat label="Passed between agents" value={`~${formatTokens(t.passed_tokens)} tok`} hint="Tasks handed out plus results returned (estimated)" />
+          <Stat label={t('Passed between agents')} value={`~${formatTokens(tot.passed_tokens)} tok`} hint={t('Tasks handed out plus results returned (estimated)')} />
         </div>
         {costTotal > 0 && (
           <>
@@ -93,23 +94,23 @@ function Tree({ id, tree }: { id: string; tree: NonNullable<ReturnType<typeof us
       </Card>
 
       <Card
-        title="Agent flow"
+        title={t('Agent flow')}
         right={
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-[var(--color-muted-foreground)]">Click an agent for details</span>
-            <Button onClick={() => setPlaying((p) => !p)} title={playing ? 'Pause the moving dots' : 'Play the moving dots'}>
-              {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />} {playing ? 'Pause flow' : 'Play flow'}
+            <span className="text-[11px] text-[var(--color-muted-foreground)]">{t('Click an agent for details')}</span>
+            <Button onClick={() => setPlaying((p) => !p)} title={playing ? t('Pause the moving dots') : t('Play the moving dots')}>
+              {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />} {playing ? t('Pause flow') : t('Play flow')}
             </Button>
           </div>
         }
       >
         <Flow layout={layout} selected={selected} onSelect={setSelected} playing={playing} />
         <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[var(--color-muted-foreground)]">
-          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-subtle)]" />task out</span>
-          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full border-2 border-[var(--color-subtle)]" />result back</span>
-          <span>line weight = cost</span>
-          <span><i className="mr-1.5 inline-block h-2 w-3.5 rounded-sm border border-dashed border-[#7c3aed99] bg-[#7c3aed22]" />agents running in parallel</span>
-          <span>time runs left to right</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--color-subtle)]" />{t('task out')}</span>
+          <span><i className="mr-1.5 inline-block h-2 w-2 rounded-full border-2 border-[var(--color-subtle)]" />{t('result back')}</span>
+          <span>{t('line weight = cost')}</span>
+          <span><i className="mr-1.5 inline-block h-2 w-3.5 rounded-sm border border-dashed border-[#7c3aed99] bg-[#7c3aed22]" />{t('agents running in parallel')}</span>
+          <span>{t('time runs left to right')}</span>
         </div>
       </Card>
 
@@ -246,7 +247,7 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
           ))}
           <g stroke="var(--color-border)" strokeWidth={1}>
             <path d={`M60 ${layout.axisY} H700`} />
-            {layout.ticks.map((t, i) => <path key={i} d={`M${t.x} ${layout.axisY - 4} V${layout.axisY + 4}`} />)}
+            {layout.ticks.map((tk, i) => <path key={i} d={`M${tk.x} ${layout.axisY - 4} V${layout.axisY + 4}`} />)}
           </g>
           <g fill="var(--color-muted-foreground)" fontSize={10} textAnchor="middle">
             {layout.ticks.map((t, i) => <text key={i} x={t.x} y={layout.axisY + 18}>{t.label}</text>)}
@@ -300,7 +301,7 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
                 type="button"
                 data-bubble={p.agent.id}
                 onClick={() => onSelect(p.agent.id)}
-                aria-label={`Show ${p.agent.name}`}
+                aria-label={t('Show {name}', { name: p.agent.name })}
                 className="absolute flex h-[30px] w-[30px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[3px] border-[var(--color-card)] text-white transition-shadow"
                 style={{ ...pos(x, p.y), background: p.color, outline: sel ? `2px solid ${p.color}` : undefined, outlineOffset: 2 }}
               >
@@ -315,7 +316,7 @@ function Flow({ layout, selected, onSelect, playing }: { layout: NonNullable<Ret
                 style={isMain ? pos(52, 8) : pos(p.xs + 2, p.y + 16)}
               >
                 <b className="block truncate text-xs font-semibold">{p.agent.name}</b>
-                <span className="block truncate text-[11px] text-[var(--color-muted-foreground)]">{isMain ? p.agent.model ?? 'main agent' : p.agent.role}</span>
+                <span className="block truncate text-[11px] text-[var(--color-muted-foreground)]">{isMain ? p.agent.model ?? t('main agent') : p.agent.role}</span>
                 <i className="block truncate text-[11px] not-italic tabular-nums text-[var(--color-subtle)]">{meta(p.agent) || '—'}</i>
               </button>
             </div>
@@ -332,7 +333,7 @@ function Pill({ style, value, color, up }: { style: React.CSSProperties; value: 
     <span
       className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center gap-0.5 whitespace-nowrap rounded-full border border-[var(--color-border)] bg-[var(--color-background)] py-px pl-1 pr-1.5 text-[10px] tabular-nums text-[var(--color-subtle)]"
       style={style}
-      title={up ? 'Task handed to the subagent (estimated tokens)' : 'Result returned to its parent (estimated tokens)'}
+      title={up ? t('Task handed to the subagent (estimated tokens)') : t('Result returned to its parent (estimated tokens)')}
     >
       <Arrow className="h-2.5 w-2.5" style={{ color }} />~{formatTokens(value)}
     </span>
@@ -355,15 +356,15 @@ function Detail({ id, placed }: { id: string; placed: Placed }) {
         {a.parent_id !== null && <span className="text-xs text-[var(--color-muted-foreground)]">{a.role}</span>}
         {a.model && <Badge tone="primary">{a.model}</Badge>}
         {a.cost_usd != null && <Badge>{formatUsd(a.cost_usd)}</Badge>}
-        {a.tokens.total > 0 && <Badge title={`input ${a.tokens.input}, output ${a.tokens.output}, cache read ${a.tokens.cache_read}, cache write ${a.tokens.cache_write}`}>{formatTokens(a.tokens.total)} tok</Badge>}
+        {a.tokens.total > 0 && <Badge title={t('input {i}, output {o}, cache read {r}, cache write {w}', { i: a.tokens.input, o: a.tokens.output, r: a.tokens.cache_read, w: a.tokens.cache_write })}>{formatTokens(a.tokens.total)} tok</Badge>}
         {a.duration_ms != null && <Badge>{formatMs(a.duration_ms)}</Badge>}
-        <Badge>{a.steps} steps · {a.tool_calls} tool calls</Badge>
-        {a.errors > 0 && <Badge tone="error">{a.errors} errors</Badge>}
-        {a.parent_id !== null && <Badge tone={tone}>{a.status}</Badge>}
-        {a.background && <Badge>background</Badge>}
+        <Badge>{t('{s} steps · {c} tool calls', { s: a.steps, c: a.tool_calls })}</Badge>
+        {a.errors > 0 && <Badge tone="error">{t('{n} errors', { n: a.errors })}</Badge>}
+        {a.parent_id !== null && <Badge tone={tone}>{t(a.status)}</Badge>}
+        {a.background && <Badge>{t('background')}</Badge>}
         <span className="ml-auto flex gap-1.5">
-          <Button onClick={() => open('chat')} disabled={!target} title={target ? 'Open this agent’s conversation' : 'Its transcript was not found'}>Open chat</Button>
-          <Button onClick={() => open('trajectory')} disabled={!target}>Open trajectory</Button>
+          <Button onClick={() => open('chat')} disabled={!target} title={target ? t('Open this agent’s conversation') : t('Its transcript was not found')}>{t('Open chat')}</Button>
+          <Button onClick={() => open('trajectory')} disabled={!target}>{t('Open trajectory')}</Button>
         </span>
       </div>
       {Object.keys(a.tools).length > 0 && (
@@ -375,8 +376,8 @@ function Detail({ id, placed }: { id: string; placed: Placed }) {
       )}
       {a.parent_id !== null && (
         <div className="mt-3 grid gap-2.5 md:grid-cols-2">
-          <Handoff icon={<ArrowUpRight className="h-3 w-3" />} title="Task handed over" text={a.task} />
-          <Handoff icon={<ArrowDownLeft className="h-3 w-3" />} title="Result returned" text={a.result} />
+          <Handoff icon={<ArrowUpRight className="h-3 w-3" />} title={t('Task handed over')} text={a.task} />
+          <Handoff icon={<ArrowDownLeft className="h-3 w-3" />} title={t('Result returned')} text={a.result} />
         </div>
       )}
     </Card>
@@ -393,10 +394,10 @@ function Handoff({ icon, title, text }: { icon: React.ReactNode; title: string; 
       {text ? (
         <p className="max-h-44 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed">
           {text.text}
-          {text.truncated && <span className="text-[var(--color-muted-foreground)]"> … (cut)</span>}
+          {text.truncated && <span className="text-[var(--color-muted-foreground)]"> … {t('(cut)')}</span>}
         </p>
       ) : (
-        <p className="text-[11px] text-[var(--color-muted-foreground)]">Not available.</p>
+        <p className="text-[11px] text-[var(--color-muted-foreground)]">{t('Not available.')}</p>
       )}
     </div>
   );
