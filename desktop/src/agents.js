@@ -29,6 +29,13 @@ const AGENTS = [
     afterConnect: "Restart OpenCode so it loads the plugin.",
   },
   {
+    id: "cursor",
+    name: "Cursor",
+    blurb:
+      "Records every prompt and tool call as a run. Adds hooks to ~/.cursor/hooks.json.",
+    afterConnect: "Cursor reloads its hooks by itself; send a message to see the run.",
+  },
+  {
     id: "gemini",
     name: "Gemini CLI",
     blurb:
@@ -180,7 +187,7 @@ async function lastSeen(dashboardUrl) {
       } catch {
         continue;
       }
-      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode", dsh: "dsh", gemini: "gemini" }[agent];
+      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode", dsh: "dsh", gemini: "gemini", cursor: "cursor" }[agent];
       const at = Date.parse(`${String(t.timestamp).replace(" ", "T")}Z`);
       if (key && (!seen[key] || at > seen[key])) seen[key] = at;
     }

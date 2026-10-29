@@ -28,8 +28,8 @@
     "LoopPrism turned on monitoring for the apps it found on this PC. Switch off any you don't want.":
       "LoopPrism 已为在这台电脑上找到的应用开启监控,不需要的可以关掉。",
     "Got it": "知道了",
-    "The sessions of all six apps are read from disk and appear under Sessions, whether or not monitoring is switched on. The switch adds live runs.":
-      "六个应用的会话都会直接从磁盘读取并显示在“会话”中,无论是否开启监控。开关用于额外记录实时运行。",
+    "Sessions are read from disk and appear under Sessions for every app here except Cursor, whether or not monitoring is switched on. The switch adds live runs.":
+      "除 Cursor 外,这里的应用的会话都会直接从磁盘读取并显示在“会话”中,无论是否开启监控。开关用于额外记录实时运行。",
     "Other MCP clients": "其他 MCP 客户端",
     "Any client that talks to MCP servers over HTTP can be recorded by pointing it at the proxy instead of the server.":
       "任何通过 HTTP 连接 MCP 服务器的客户端,只要指向代理而不是服务器,就能被记录。",
@@ -104,6 +104,8 @@
     "In DSH Desktop, install the plugin dsh-hooks-claude-code, set its configPath to ~/.loopprism/dsh-hooks.json, and restart it.": "在 DSH Desktop 中安装插件 dsh-hooks-claude-code,把它的 configPath 设为 ~/.loopprism/dsh-hooks.json,然后重启。",
     "Records every prompt, tool call and error as a run. Adds hooks to ~/.gemini/settings.json.": "把每条提示词、工具调用和错误记录为一次运行。会在 ~/.gemini/settings.json 中添加钩子。",
     "Restart Gemini CLI so it picks up the hooks.": "重启 Gemini CLI 以加载钩子。",
+    "Records every prompt and tool call as a run. Adds hooks to ~/.cursor/hooks.json.": "把每条提示词和工具调用记录为一次运行。会在 ~/.cursor/hooks.json 中添加钩子。",
+    "Cursor reloads its hooks by itself; send a message to see the run.": "Cursor 会自动重新加载钩子;发一条消息就能看到运行。",
     "Restart OpenCode so it loads the plugin.": "重启 OpenCode 以加载插件。",
     "Restart WorkBuddy so it picks up the hooks.": "重启 WorkBuddy 以加载钩子。",
     "Open Codex and run /hooks once to review and trust the LoopPrism hooks.":

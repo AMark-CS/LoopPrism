@@ -64,13 +64,13 @@
     <td align="center" width="25%"><img src="docs/assets/apps/claude-code.png" width="72" alt="Claude Code"><br><b>Claude Code</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/codex.png" width="72" alt="Codex"><br><b>Codex</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/gemini-cli.png" width="72" alt="Gemini CLI"><br><b>Gemini CLI</b></td>
-    <td align="center" width="25%"><img src="docs/assets/apps/opencode.png" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/cursor.png" width="72" alt="Cursor"><br><b>Cursor</b></td>
   </tr>
   <tr>
+    <td align="center" width="25%"><img src="docs/assets/apps/opencode.png" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/deepseek-harness.png" width="72" alt="DeepSeek Harness"><br><b>DeepSeek Harness</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/workbuddy.png" width="72" alt="WorkBuddy"><br><b>WorkBuddy</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/more.svg" width="72" alt="更多应用即将支持"><br><a href="https://github.com/AMark-CS/LoopPrism/issues">更多应用即将支持</a></td>
-    <td></td>
   </tr>
 </table>
 
@@ -81,6 +81,7 @@ LoopPrism 支持 **macOS** 和 **Windows**，两个平台功能一致。
 | **Claude Code** | `~/.claude/projects`（含子代理） | 支持，插件 | 支持 |
 | **Codex** | `~/.codex/sessions` | 支持，`~/.codex/hooks.json` | 支持 |
 | **Gemini CLI** | `~/.gemini/tmp/<项目>/chats`（JSON 与 JSONL），`$GEMINI_CLI_HOME` | 支持，`~/.gemini/settings.json` | 只读 |
+| **Cursor** | 暂不支持 | 支持，`~/.cursor/hooks.json` | 仅实时运行 |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | 支持，插件 `~/.config/opencode/plugins` | 只读 |
 | **DeepSeek Harness**（`dsh`） | `~/.dsh/sessions`（zstd），`$DSH_HOME`，以及 DSH Desktop 自己应用数据目录里的 `dsh-desktop/harness/sessions` | 支持，经其钩子插件（需手动一步） | 只读 |
 | **WorkBuddy** | `~/.workbuddy/projects`，`$WORKBUDDY_CONFIG_DIR` | 支持，`~/.workbuddy/settings.json` | 只读 |
@@ -103,7 +104,7 @@ pip install "git+https://github.com/AMark-CS/LoopPrism.git"
 lprism proxy        # 然后打开 http://localhost:8080
 ```
 
-### 为 Claude Code、Codex、Gemini CLI、WorkBuddy、OpenCode、DeepSeek Harness 开启实时运行
+### 为 Claude Code、Codex、Gemini CLI、Cursor、WorkBuddy、OpenCode、DeepSeek Harness 开启实时运行
 
 ```bash
 npx loopprism install     # 为你已安装的应用添加 hooks

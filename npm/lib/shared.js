@@ -1,7 +1,7 @@
 'use strict';
-// The hook scripts under ~/.loopprism/hooks are shared by Codex, WorkBuddy, DeepSeek Harness and Gemini CLI:
+// The hook scripts under ~/.loopprism/hooks are shared by Codex, WorkBuddy, DeepSeek Harness, Gemini CLI and Cursor:
 // keep the copy while another of them still points at it.
-const USERS = ['codex', 'workbuddy', 'dsh', 'gemini'];
+const USERS = ['codex', 'workbuddy', 'dsh', 'gemini', 'cursor'];
 
 function hooksInUse(except, opts) {
   return USERS.filter((n) => n !== except).some((n) => {

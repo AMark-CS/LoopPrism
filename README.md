@@ -137,13 +137,13 @@
     <td align="center" width="25%"><img src="docs/assets/apps/claude-code.png" width="72" alt="Claude Code"><br><b>Claude Code</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/codex.png" width="72" alt="Codex"><br><b>Codex</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/gemini-cli.png" width="72" alt="Gemini CLI"><br><b>Gemini CLI</b></td>
-    <td align="center" width="25%"><img src="docs/assets/apps/opencode.png" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/cursor.png" width="72" alt="Cursor"><br><b>Cursor</b></td>
   </tr>
   <tr>
+    <td align="center" width="25%"><img src="docs/assets/apps/opencode.png" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/deepseek-harness.png" width="72" alt="DeepSeek Harness"><br><b>DeepSeek Harness</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/workbuddy.png" width="72" alt="WorkBuddy"><br><b>WorkBuddy</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/more.svg" width="72" alt="More apps coming"><br><a href="https://github.com/AMark-CS/LoopPrism/issues">More apps coming</a></td>
-    <td></td>
   </tr>
 </table>
 
@@ -154,6 +154,7 @@ LoopPrism runs on **macOS** and **Windows** with the same features on both: the 
 | **Claude Code** | `~/.claude/projects` (also subagent trees) | yes, plugin | yes |
 | **Codex** | `~/.codex/sessions` | yes, `~/.codex/hooks.json` | yes |
 | **Gemini CLI** | `~/.gemini/tmp/<project>/chats` (JSON and JSONL), `$GEMINI_CLI_HOME` | yes, `~/.gemini/settings.json` | read-only |
+| **Cursor** | not yet | yes, `~/.cursor/hooks.json` | live runs only |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | yes, a plugin in `~/.config/opencode/plugins` | read-only |
 | **DeepSeek Harness** (`dsh`) | `~/.dsh/sessions` (zstd), `$DSH_HOME`, and DSH Desktop's own `dsh-desktop/harness/sessions` in its app-data folder | yes, via its hook plugin (one manual step) | read-only |
 | **WorkBuddy** | `~/.workbuddy/projects`, `$WORKBUDDY_CONFIG_DIR` | yes, `~/.workbuddy/settings.json` | read-only |
@@ -204,7 +205,7 @@ lprism proxy                                                    # then open http
 Sessions are read after the fact. To also watch an agent **as it works**:
 
 ```bash
-npx loopprism install     # adds the hooks to Claude Code, Codex, Gemini CLI, WorkBuddy, OpenCode and/or DeepSeek Harness, whichever you have
+npx loopprism install     # adds the hooks to Claude Code, Codex, Gemini CLI, Cursor, WorkBuddy, OpenCode and/or DeepSeek Harness, whichever you have
 lpa status                # newest runs
 ```
 

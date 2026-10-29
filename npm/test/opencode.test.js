@@ -147,3 +147,43 @@ test('hook.js understands Gemini CLI events, including a tool that failed', () =
   assert.equal(bad.error, 'nope');
   assert.equal(buildEvent({ ...base, hook_event_name: 'AfterAgent' }, 'gemini').event, 'stop');
 });
+
+test('cursor: hooks go into ~/.cursor/hooks.json (version 1, seconds), keeping the user\'s own', () => {
+  const cursor = require('../lib/cursor');
+  const home = tmp();
+  const file = path.join(home, '.cursor', 'hooks.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const mine = { command: './mine.sh' };
+  fs.writeFileSync(file, JSON.stringify({ version: 1, hooks: { stop: [mine] } }));
+  cursor.install({ home });
+  cursor.install({ home });
+  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(cfg.version, 1);
+  assert.deepEqual(Object.keys(cfg.hooks).sort(), ['beforeSubmitPrompt', 'postToolUse', 'postToolUseFailure', 'sessionEnd', 'sessionStart', 'stop']);
+  assert.equal(cfg.hooks.stop.length, 2);
+  assert.deepEqual(cfg.hooks.stop[0], mine);
+  assert.match(cfg.hooks.postToolUse[0].command, /--agent cursor$/);
+  assert.equal(cfg.hooks.postToolUse[0].timeout, 5);
+  assert.equal(cursor.isInstalled({ home }), true);
+  cursor.uninstall({ home });
+  const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(Object.keys(after.hooks), ['stop']);
+  assert.deepEqual(after.hooks.stop, [mine]);
+});
+
+test('hook.js understands Cursor events and answers beforeSubmitPrompt with continue:true', () => {
+  const { buildEvent } = require('../plugin/scripts/hook');
+  const base = { conversation_id: 'c1', workspace_roots: ['/w/app'], model: 'm' };
+  const p = buildEvent({ ...base, hook_event_name: 'beforeSubmitPrompt', prompt: 'hi' }, 'cursor');
+  assert.deepEqual([p.event, p.session_id, p.cwd, p.prompt], ['prompt', 'c1', '/w/app', 'hi']);
+  const t = buildEvent({ ...base, hook_event_name: 'postToolUse', tool_name: 'Shell', tool_input: { command: 'ls' }, tool_output: '{"exitCode":0}', tool_use_id: 'u', duration: 12 }, 'cursor');
+  assert.deepEqual([t.event, t.tool_response, t.duration_ms], ['tool', '{"exitCode":0}', 12]);
+  const f = buildEvent({ ...base, hook_event_name: 'postToolUseFailure', tool_name: 'Shell', tool_input: {}, error_message: 'timed out', duration: 5000 }, 'cursor');
+  assert.deepEqual([f.event, f.error], ['tool_failure', 'timed out']);
+  assert.equal(buildEvent({ ...base, hook_event_name: 'stop', status: 'completed' }, 'cursor').event, 'stop');
+  const { spawnSync } = require('node:child_process');
+  const r = spawnSync('node', [path.join(__dirname, '..', 'plugin', 'scripts', 'hook.js'), '--agent', 'cursor'], {
+    input: JSON.stringify({ ...base, hook_event_name: 'beforeSubmitPrompt', prompt: 'x' }), encoding: 'utf8', env: { ...process.env, LOOPPRISM_DISABLE: '1' },
+  });
+  assert.equal(r.stdout, '{"continue":true}');
+});
