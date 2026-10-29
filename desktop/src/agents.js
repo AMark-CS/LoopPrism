@@ -30,7 +30,7 @@ const AGENTS = [
   },
   {
     id: "dsh",
-    name: "DeepSeek Harness",
+    name: "DeepSeek Harness (DSH Desktop)",
     blurb:
       "Records every prompt and tool call as a run. Writes a hooks file (~/.loopprism/dsh-hooks.json) for DeepSeek Harness's own hook plugin.",
     afterConnect:

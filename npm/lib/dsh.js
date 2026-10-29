@@ -17,8 +17,9 @@ const EVENTS = ['SessionStart', 'UserPromptSubmit', 'PostToolUse', 'Stop'];
 const hooksFile = (home = os.homedir()) => path.join(stableDirs(home).base, 'dsh-hooks.json');
 const dshHome = (env = process.env, home = os.homedir()) => env.DSH_HOME || path.join(home, '.dsh');
 
+/** DeepSeek Harness or its desktop app is here: ~/.dsh exists once it has run; the app may not have yet. */
 function available({ home, env = process.env } = {}) {
-  return fs.existsSync(dshHome(env, home));
+  return fs.existsSync(dshHome(env, home)) || (process.platform === 'darwin' && fs.existsSync('/Applications/DSH Desktop.app'));
 }
 
 function install({ home, env = process.env } = {}) {
