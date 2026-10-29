@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 /** SQLite stores UTC timestamps without a zone ("2026-10-28 04:07:26"). */
 export function parseUtc(ts: string): Date {
   if (/[zZ]|[+-]\d\d:?\d\d$/.test(ts)) return new Date(ts);
@@ -42,12 +44,12 @@ export const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const CATEGORY_LABELS: Record<string, string> = {
-  system_prompt: 'System Prompt',
-  tool_schemas: 'Tool Schemas',
-  user: 'User Messages',
-  injected: 'Injected Context',
-  skills: 'Skill Injections',
-  assistant: 'Assistant Messages',
-  tool_results: 'Tool Results',
-  unattributed: 'System & tools (inferred)',
+  system_prompt: t('System Prompt'),
+  tool_schemas: t('Tool Schemas'),
+  user: t('User Messages'),
+  injected: t('Injected Context'),
+  skills: t('Skill Injections'),
+  assistant: t('Assistant Messages'),
+  tool_results: t('Tool Results'),
+  unattributed: t('System & tools (inferred)'),
 };

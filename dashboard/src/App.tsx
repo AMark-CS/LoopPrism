@@ -1,6 +1,7 @@
 import './index.css';
 import { Activity } from 'lucide-react';
 import { useRoute } from './lib/route';
+import { t } from './lib/i18n';
 import { CostView } from './views/CostView';
 import { LiveView } from './views/LiveView';
 import { OptimizeView } from './views/OptimizeView';
@@ -10,9 +11,9 @@ import { SessionsView } from './views/SessionsView';
 const inDesktopApp = window.parent !== window;
 
 const VIEWS = [
-  { key: 'sessions', label: 'Sessions' },
-  { key: 'cost', label: 'Cost' },
-  { key: 'optimize', label: 'Optimize' },
+  { key: 'sessions', label: t('Sessions') },
+  { key: 'cost', label: t('Cost') },
+  { key: 'optimize', label: t('Optimize') },
 ] as const;
 
 export default function App() {

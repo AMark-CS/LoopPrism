@@ -5,6 +5,7 @@ import { Download, FolderOpen, Play, Search, Trash2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSession, useSessionList } from '../hooks/useSessions';
 import { formatUsd, parseUtc } from '../lib/format';
+import { dateLocale, t } from '../lib/i18n';
 import { useRoute } from '../lib/route';
 import { Badge, Button, CopyButton, Empty } from '../components/ui';
 import { ChatTab } from './session/ChatTab';
@@ -28,30 +29,30 @@ const AGENT_TONE: Record<string, 'muted' | 'primary' | 'ok' | 'warn' | 'error'> 
   opencode: 'error',
 };
 const TABS = [
-  { key: 'chat', label: 'Chat' },
-  { key: 'trajectory', label: 'Trajectory' },
-  { key: 'context', label: 'Context' },
-  { key: 'agents', label: 'Agents' },
+  { key: 'chat', label: t('Chat') },
+  { key: 'trajectory', label: t('Trajectory') },
+  { key: 'context', label: t('Context') },
+  { key: 'agents', label: t('Agents') },
 ] as const;
 
-const basename = (p: string | null) => (p ? p.split(/[\\/]/).filter(Boolean).pop() ?? p : 'No project');
+const basename = (p: string | null) => (p ? p.split(/[\\/]/).filter(Boolean).pop() ?? p : t('No project'));
 // Windows has a Recycle Bin, not a Trash.
-const BIN = /Windows/i.test(navigator.userAgent) ? 'Recycle Bin' : 'Trash';
+const BIN = t(/Windows/i.test(navigator.userAgent) ? 'Recycle Bin' : 'Trash');
 const ago = (s: SessionSummary) => {
   const ts = s.ended_at ?? s.started_at;
-  return ts ? formatDistanceToNow(parseUtc(ts), { addSuffix: true }) : '';
+  return ts ? formatDistanceToNow(parseUtc(ts), { addSuffix: true, locale: dateLocale }) : '';
 };
 
 function dayLabel(s: SessionSummary): string {
   const ts = s.ended_at ?? s.started_at;
-  if (!ts) return 'Unknown';
+  if (!ts) return t('Unknown');
   const d = parseUtc(ts);
   const days = Math.floor((Date.now() - d.getTime()) / 86_400_000);
-  if (days < 1) return 'Today';
-  if (days < 2) return 'Yesterday';
-  if (days < 7) return 'This week';
-  if (days < 30) return 'This month';
-  return 'Older';
+  if (days < 1) return t('Today');
+  if (days < 2) return t('Yesterday');
+  if (days < 7) return t('This week');
+  if (days < 30) return t('This month');
+  return t('Older');
 }
 
 function SessionList({
@@ -70,8 +71,8 @@ function SessionList({
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [error, setError] = useState('');
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(q), 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(q), 250);
+    return () => clearTimeout(timer);
   }, [q]);
   const { data, isLoading } = useSessionList({ q: debounced || undefined, agent: agent || undefined });
   const sessions = data?.sessions ?? [];
@@ -87,7 +88,7 @@ function SessionList({
 
   async function deletePicked() {
     if (!picked.size) return;
-    if (!window.confirm(`Move ${picked.size} session${picked.size > 1 ? 's' : ''} to the ${BIN}?`)) return;
+    if (!window.confirm(t(picked.size > 1 ? 'Move {n} sessions to the {bin}?' : 'Move {n} session to the {bin}?', { n: picked.size, bin: BIN }))) return;
     setError('');
     for (const id of picked) {
       try {
@@ -111,15 +112,15 @@ function SessionList({
       <div className="space-y-2 border-b border-[var(--color-border)] p-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            Sessions
+            {t('Sessions')}
             <Badge>{data?.total ?? 0}</Badge>
-            {!!data?.pending && <span className="text-[10px] font-normal text-[var(--color-muted-foreground)]">indexing {data.pending}…</span>}
+            {!!data?.pending && <span className="text-[10px] font-normal text-[var(--color-muted-foreground)]">{t('indexing {n}…', { n: data.pending })}</span>}
           </div>
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setGroupBy(groupBy === 'time' ? 'project' : 'time')}
-              title="Group by"
+              title={t('Group by')}
               className="rounded p-1 text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
             >
               <FolderOpen className="h-4 w-4" />
@@ -132,7 +133,7 @@ function SessionList({
               }}
               className={`rounded px-2 py-0.5 text-[11px] ${selecting ? 'bg-[var(--color-accent)]' : 'text-[var(--color-muted-foreground)]'}`}
             >
-              Select
+              {t('Select')}
             </button>
           </div>
         </div>
@@ -141,13 +142,13 @@ function SessionList({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search titles and messages"
+            placeholder={t('Search titles and messages')}
             className="w-full rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1.5 pl-7 pr-2 text-xs outline-none focus:border-[var(--color-primary)]"
           />
         </div>
         <div className="flex flex-wrap gap-1">
           {[
-            ['', 'All'],
+            ['', t('All')],
             ['claude-code', 'Claude Code'],
             ['codex', 'Codex'],
             ['dsh', 'DeepSeek Harness'],
@@ -170,9 +171,9 @@ function SessionList({
         </div>
         {selecting && (
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-[var(--color-muted-foreground)]">{picked.size} selected</span>
+            <span className="text-[11px] text-[var(--color-muted-foreground)]">{t('{n} selected', { n: picked.size })}</span>
             <Button tone="danger" disabled={!picked.size} onClick={deletePicked}>
-              <Trash2 className="h-3 w-3" /> Move to {BIN}
+              <Trash2 className="h-3 w-3" /> {t('Move to {bin}', { bin: BIN })}
             </Button>
           </div>
         )}
@@ -180,9 +181,9 @@ function SessionList({
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {isLoading && <Empty>Loading sessions…</Empty>}
+        {isLoading && <Empty>{t('Loading sessions…')}</Empty>}
         {!isLoading && sessions.length === 0 && (
-          <Empty>{debounced ? 'No sessions match.' : 'No agent sessions found on this computer.'}</Empty>
+          <Empty>{debounced ? t('No sessions match.') : t('No agent sessions found on this computer.')}</Empty>
         )}
         {groups.map(([label, items]) => (
           <div key={label}>
@@ -201,7 +202,7 @@ function SessionList({
                     type="checkbox"
                     className="mt-1 shrink-0"
                     disabled={s.read_only}
-                    title={s.read_only ? 'Read-only: delete it from its own app' : undefined}
+                    title={s.read_only ? t('Read-only: delete it from its own app') : undefined}
                     checked={picked.has(s.id)}
                     onChange={(e) => {
                       const n = new Set(picked);
@@ -224,7 +225,7 @@ function SessionList({
                     <span className="ml-auto shrink-0">{ago(s)}</span>
                   </div>
                   <div className="mt-0.5 text-[10px] text-[var(--color-muted-foreground)]">
-                    {s.turns} turns · {s.steps} steps{s.cost_usd != null && ` · ${formatUsd(s.cost_usd)}`}
+                    {t('{n} turns · {s} steps', { n: s.turns, s: s.steps })}{s.cost_usd != null && ` · ${formatUsd(s.cost_usd)}`}
                   </div>
                 </button>
               </div>
@@ -242,25 +243,25 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
   const [, go] = useRoute();
   const { data, isLoading, error } = useSession(id);
   const [msg, setMsg] = useState('');
-  if (isLoading) return <Empty>Loading session…</Empty>;
-  if (error || !data) return <Empty>Session not found.</Empty>;
+  if (isLoading) return <Empty>{t('Loading session…')}</Empty>;
+  if (error || !data) return <Empty>{t('Session not found.')}</Empty>;
   const { session: s, stats, findings } = data;
   const isSub = id.includes('~'); // a subagent's own transcript, opened from the Agents tab
   const parentId = id.split('~')[0];
-  const tabs = TABS.filter((t) => t.key !== 'agents' || (!isSub && s.agent === 'claude-code'));
+  const tabs = TABS.filter((x) => x.key !== 'agents' || (!isSub && s.agent === 'claude-code'));
   if (isSub && tab === 'agents') tab = 'chat';
 
   async function resume() {
     setMsg('');
     try {
       await api.resumeSession(id, true);
-      setMsg('Opened in a terminal');
+      setMsg(t('Opened in a terminal'));
     } catch (e) {
       setMsg((e as Error).message);
     }
   }
   async function remove() {
-    if (!window.confirm(`Move “${s.title}” to the ${BIN}?`)) return;
+    if (!window.confirm(t('Move “{title}” to the {bin}?', { title: s.title, bin: BIN }))) return;
     try {
       await api.deleteSession(id);
       qc.invalidateQueries({ queryKey: ['sessions'] });
@@ -279,7 +280,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
             onClick={() => go(`sessions/${parentId}/agents`)}
             className="text-xs text-[var(--color-primary)] hover:underline"
           >
-            ← Back to the agent flow
+            {t('← Back to the agent flow')}
           </button>
         )}
         <button
@@ -287,7 +288,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
           onClick={() => go('sessions')}
           className="text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)] md:hidden"
         >
-          ← All sessions
+          {t('← All sessions')}
         </button>
         <div className="flex flex-wrap items-start justify-between gap-2 md:gap-4">
           <div className="min-w-0">
@@ -299,14 +300,14 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
               {s.models.map((m) => (
                 <Badge key={m}>{m}</Badge>
               ))}
-              {s.cost_usd != null && <span>{formatUsd(s.cost_usd)} est.</span>}
+              {s.cost_usd != null && <span>{t('{c} est.', { c: formatUsd(s.cost_usd) })}</span>}
             </div>
           </div>
           {!isSub && (
           <div className="flex shrink-0 items-center gap-2">
             {!s.read_only && (
-              <Button tone="primary" onClick={resume} title="Open a new terminal window and resume this session">
-                <Play className="h-3 w-3" /> Resume
+              <Button tone="primary" onClick={resume} title={t('Open a new terminal window and resume this session')}>
+                <Play className="h-3 w-3" /> {t('Resume')}
               </Button>
             )}
             <a
@@ -314,7 +315,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
               download={`${s.title.slice(0, 40)}.md`}
               className="inline-flex items-center gap-1.5 rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-accent)]"
             >
-              <Download className="h-3 w-3" /> Export
+              <Download className="h-3 w-3" /> {t('Export')}
             </a>
             {!s.read_only && (
               <Button tone="danger" onClick={remove}>
@@ -335,27 +336,27 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
         )}
         {findings.filter((f) => f.severity !== 'info').length > 0 && tab === 'chat' && (
           <div className="text-[11px] text-[var(--tone-warn-fg)]">
-            {findings.filter((f) => f.severity !== 'info').length} patterns worth a look — see Trajectory.
+            {t('{n} patterns worth a look — see Trajectory.', { n: findings.filter((f) => f.severity !== 'info').length })}
           </div>
         )}
       </div>
       <div className="flex gap-6 border-b border-[var(--color-border)] px-5">
-        {tabs.map((t) => (
+        {tabs.map((x) => (
           <button
-            key={t.key}
+            key={x.key}
             type="button"
-            onClick={() => go(`sessions/${id}/${t.key}`)}
+            onClick={() => go(`sessions/${id}/${x.key}`)}
             className={`-mb-px border-b-2 py-2.5 text-sm ${
-              tab === t.key
+              tab === x.key
                 ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                 : 'border-transparent text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]'
             }`}
           >
-            {t.label}
+            {x.label}
           </button>
         ))}
         <span className="ml-auto self-center text-[11px] text-[var(--color-muted-foreground)]">
-          {stats.turns} turns · {stats.steps} steps · {stats.tool_calls} tool calls
+          {t('{a} turns · {b} steps · {c} tool calls', { a: stats.turns, b: stats.steps, c: stats.tool_calls })}
         </span>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
@@ -371,7 +372,7 @@ function SessionPane({ id, tab: tabProp, focus }: { id: string; tab: string; foc
 export function SessionsView() {
   const [seg, go] = useRoute();
   const id = seg[1] ?? null;
-  const tab = TABS.some((t) => t.key === seg[2]) ? seg[2] : 'chat';
+  const tab = TABS.some((x) => x.key === seg[2]) ? seg[2] : 'chat';
   const focus = seg[3] !== undefined && /^\d+$/.test(seg[3]) ? Number(seg[3]) : null;
   return (
     <div className="flex min-h-0 flex-1">
@@ -380,7 +381,7 @@ export function SessionsView() {
         <SessionPane key={id} id={id} tab={tab} focus={focus} />
       ) : (
         <div className="hidden min-w-0 flex-1 md:flex">
-          <Empty>Pick a session to inspect its chat, trajectory and context.</Empty>
+          <Empty>{t('Pick a session to inspect its chat, trajectory and context.')}</Empty>
         </div>
       )}
     </div>

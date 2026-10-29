@@ -1,3 +1,4 @@
+const t = (text, vars) => I18N.t(text, vars);
 const $ = (sel) => document.querySelector(sel);
 const el = (tag, props = {}, ...kids) => {
   const node = Object.assign(document.createElement(tag), props);
@@ -12,11 +13,11 @@ let dashboardUrl = null;
 let toastTimer;
 
 function toast(text) {
-  const t = $("#toast");
-  t.textContent = text;
-  t.hidden = false;
+  const box = $("#toast");
+  box.textContent = t(text);
+  box.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), 2500);
+  toastTimer = setTimeout(() => (box.hidden = true), 2500);
 }
 
 /* ---------- tabs ---------- */
@@ -25,8 +26,8 @@ let route = "sessions";
 let applied = null; // route currently loaded in the iframe (keeps inner navigation when switching tabs)
 
 function dashSrc() {
-  // theme=auto: the dashboard follows the window's light/dark (set by the Theme setting).
-  return `${dashboardUrl}/?theme=auto#/${route}`;
+  // theme=auto: the dashboard follows the window's light/dark (set by the Theme setting); lang: the Language setting.
+  return `${dashboardUrl}/?theme=auto&lang=${I18N.lang}#/${route}`;
 }
 
 function showTab(name) {
@@ -66,7 +67,7 @@ function applyStatus(s) {
   state = { ...state, status: s };
   $("#dot").className = `dot ${s.state}`;
   $("#state-text").textContent =
-    s.state === "running" && s.external ? "Using running proxy" : LABEL[s.state] || s.state;
+    s.state === "running" && s.external ? t("Using running proxy") : t(LABEL[s.state] || s.state);
   $("#copy-proxy").disabled = !s.proxyUrl;
 
   const overlay = $("#overlay");
@@ -78,10 +79,11 @@ function applyStatus(s) {
     overlay.classList.add("hidden");
   } else {
     overlay.classList.remove("hidden");
-    $("#overlay-text").textContent =
+    $("#overlay-text").textContent = t(
       s.state === "failed"
         ? "The bundled proxy keeps crashing. Open the proxy log from Settings, then restart it from the tray icon."
-        : "Starting the LoopPrism proxy…";
+        : "Starting the LoopPrism proxy…",
+    );
   }
   updateMcpOut();
 }
@@ -94,17 +96,17 @@ $("#copy-proxy").onclick = async () => {
 /* ---------- apps ---------- */
 function ago(ms) {
   const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
-  if (s < 60) return "just now";
-  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
-  return `${Math.floor(s / 86400)} d ago`;
+  if (s < 60) return t("just now");
+  if (s < 3600) return t("{n} min ago", { n: Math.floor(s / 60) });
+  if (s < 86400) return t("{n} h ago", { n: Math.floor(s / 3600) });
+  return t("{n} d ago", { n: Math.floor(s / 86400) });
 }
 
 function renderAgents() {
   const list = $("#agent-list");
   list.replaceChildren();
   if (!agents.length) {
-    list.append(el("div", { className: "card", textContent: "Checking for installed apps…" }));
+    list.append(el("div", { className: "card", textContent: t("Checking for installed apps…") }));
   }
   for (const a of agents) {
     const toggle = el("input", { type: "checkbox", className: "switch" });
@@ -113,25 +115,25 @@ function renderAgents() {
     toggle.onchange = () => setAgent(a, toggle.checked);
 
     const pill = a.busy
-      ? el("span", { className: "pill", textContent: "Working…" })
+      ? el("span", { className: "pill", textContent: t("Working…") })
       : a.connected
         ? el("span", {
             className: "pill on",
-            textContent: a.lastSeen ? `Monitoring · ${ago(a.lastSeen)}` : "Monitoring",
+            textContent: a.lastSeen ? `${t("Monitoring")} · ${ago(a.lastSeen)}` : t("Monitoring"),
           })
         : a.found
-          ? el("span", { className: "pill", textContent: "Not monitored" })
-          : el("span", { className: "pill warn", textContent: "Not found" });
+          ? el("span", { className: "pill", textContent: t("Not monitored") })
+          : el("span", { className: "pill warn", textContent: t("Not found") });
 
     const info = el(
       "div",
       { className: "info" },
       el("div", { className: "title" }, a.name, pill),
-      el("div", { className: "desc", textContent: a.blurb }),
+      el("div", { className: "desc", textContent: t(a.blurb) }),
     );
     if (a.error) info.append(el("div", { className: "note err", textContent: a.error }));
     else if (a.connected && !hooks.matches) {
-      const fix = el("button", { className: "ghost", textContent: "Send to this app" });
+      const fix = el("button", { className: "ghost", textContent: t("Send to this app") });
       fix.onclick = async () => {
         await lp.useThisApp();
         await refreshAgents();
@@ -140,12 +142,12 @@ function renderAgents() {
         el(
           "div",
           { className: "note err" },
-          `Its hooks send events to ${hooks.url}, not to this app (${state.status.dashboardUrl}). `,
+          t("Its hooks send events to {url}, not to this app ({app}). ", { url: hooks.url, app: state.status.dashboardUrl }),
           fix,
         ),
       );
     }
-    else if (a.hint) info.append(el("div", { className: "note", textContent: a.hint }));
+    else if (a.hint) info.append(el("div", { className: "note", textContent: t(a.hint) }));
 
     list.append(el("div", { className: "card agent" }, info, toggle));
   }
@@ -230,19 +232,20 @@ function fillSettings() {
   $("#port-proxy").value = s.proxyPort;
   $("#port-dash").value = s.dashboardPort;
   $("#login").checked = s.openAtLogin;
+  for (const r of document.querySelectorAll('input[name="language"]')) r.checked = r.value === (s.language || "system");
   for (const r of document.querySelectorAll('input[name="theme"]')) r.checked = r.value === (s.theme || "dark");
   $("#db-path").textContent = state.dbPath;
   $("#version").textContent = `LoopPrism ${state.version}`;
   const st = state.status;
   const moved = st.proxyUrl && (!st.proxyUrl.endsWith(`:${s.proxyPort}`) || !st.dashboardUrl.endsWith(`:${s.dashboardPort}`));
   $("#port-note").textContent = moved
-    ? `Those ports were busy, so the app is using ${st.proxyUrl} and ${st.dashboardUrl} right now.`
-    : "If a port is busy the app picks a free one automatically.";
+    ? t("Those ports were busy, so the app is using {proxy} and {dash} right now.", { proxy: st.proxyUrl, dash: st.dashboardUrl })
+    : t("If a port is busy the app picks a free one automatically.");
 }
 $("#save-ports").onclick = async () => {
   const msg = $("#port-msg");
   msg.className = "msg";
-  msg.textContent = "Restarting…";
+  msg.textContent = t("Restarting…");
   const res = await lp.saveSettings({
     proxyPort: Number($("#port-proxy").value),
     dashboardPort: Number($("#port-dash").value),
@@ -253,13 +256,21 @@ $("#save-ports").onclick = async () => {
     return;
   }
   state.settings = res.settings;
-  msg.textContent = "Applied";
+  msg.textContent = t("Applied");
   setTimeout(fillSettings, 800);
 };
 for (const r of document.querySelectorAll('input[name="theme"]')) {
   r.onchange = async () => {
     const res = await lp.saveSettings({ theme: r.value });
     if (res.error) toast(res.error);
+  };
+}
+for (const r of document.querySelectorAll('input[name="language"]')) {
+  r.onchange = async () => {
+    const res = await lp.saveSettings({ language: r.value });
+    if (res.error) return toast(res.error);
+    state.settings = res.settings;
+    applyLanguage();
   };
 }
 $("#login").onchange = async (e) => {
@@ -271,6 +282,15 @@ if (lp.platform !== "darwin") {
   $("#reveal").textContent = "Show in Explorer";
   for (const el of document.querySelectorAll("[data-mac]")) el.textContent = el.dataset.win ?? el.textContent;
 }
+
+/** Translate the window and reload the dashboard in the chosen language. */
+function applyLanguage() {
+  I18N.setLang(state.settings.language);
+  if (state.status) applyStatus(state.status);
+  renderAgents();
+  if (state.updateInfo) applyUpdate(state.updateInfo);
+  fillSettings();
+}
 $("#open-optimize").onclick = () => showTab("optimize");
 $("#reveal").onclick = () => lp.revealData();
 $("#logs").onclick = () => lp.showLogs();
@@ -279,6 +299,7 @@ $("#browser").onclick = () => state.status.dashboardUrl && lp.openExternal(state
 /* ---------- updates ---------- */
 // The button only exists while a newer version is available (or being installed).
 function applyUpdate(u) {
+  state = { ...state, updateInfo: u };
   const box = $("#update-box");
   const busy = u.phase === "downloading" || u.phase === "installing";
   const show = ["available", "downloading", "installing", "downloaded", "error"].includes(u.phase) && u.latest;
@@ -291,44 +312,43 @@ function applyUpdate(u) {
   $("#update-fill").style.width = `${u.percent ?? 0}%`;
   sub.className = `update-sub${u.phase === "error" ? " bad" : ""}`;
   const label = {
-    available: `Update to ${u.latest}`,
-    downloading: `Downloading… ${u.percent ?? 0}%`,
+    available: t("Update to {v}", { v: u.latest }),
+    downloading: t("Downloading… {p}%", { p: u.percent ?? 0 }),
     installing: "Installing…",
     downloaded: "Open installer",
     error: "Try again",
   }[u.phase];
-  if (label) $("#update-label").textContent = label;
+  if (label) $("#update-label").textContent = t(label);
   sub.textContent =
     u.phase === "error"
       ? u.error
       : u.phase === "downloaded"
-        ? lp.platform === "win32"
-          ? "Run the installer to finish."
-          : "Drag LoopPrism into Applications to finish."
+        ? t(lp.platform === "win32" ? "Run the installer to finish." : "Drag LoopPrism into Applications to finish.")
         : u.phase === "installing"
-          ? "LoopPrism will restart."
-          : `You have ${u.current}.`;
+          ? t("LoopPrism will restart.")
+          : t("You have {v}.", { v: u.current });
   const msg = $("#update-msg");
   if (u.checked) {
     msg.className = `msg${u.error && u.phase !== "error" ? " bad" : ""}`;
     msg.textContent = u.error && u.phase !== "error"
       ? u.error
       : u.phase === "idle"
-        ? `You're on the latest version (${u.current}).`
-        : `Version ${u.latest} is available.`;
+        ? t("You're on the latest version ({v}).", { v: u.current })
+        : t("Version {v} is available.", { v: u.latest });
   }
 }
 lp.onUpdate(applyUpdate);
 $("#update-btn").onclick = () => lp.installUpdate();
 $("#check-update").onclick = async () => {
   $("#update-msg").className = "msg";
-  $("#update-msg").textContent = "Checking…";
+  $("#update-msg").textContent = t("Checking…");
   applyUpdate(await lp.checkUpdate());
 };
 
 /* ---------- boot ---------- */
 (async () => {
   state = await lp.state();
+  I18N.setLang(state.settings.language);
   applyStatus(state.status);
   applyUpdate(await lp.updateState());
   await refreshAgents();

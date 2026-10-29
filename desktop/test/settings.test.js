@@ -37,3 +37,19 @@ test("a file written mid-way by a crash is not left behind (writes go through a 
   new Settings(f).update({ theme: "light" });
   assert.deepEqual(fs.readdirSync(path.dirname(f)), ["settings.json"]);
 });
+
+test("the language defaults to system, accepts en and zh, and refuses others", () => {
+  const s = new Settings(file());
+  assert.equal(s.get("language"), "system");
+  for (const language of ["zh", "en", "system"]) assert.equal(s.update({ language }).language, language);
+  assert.throws(() => s.update({ language: "fr" }), /Language must be/);
+  assert.equal(s.get("language"), "system");
+});
+
+test("resolveLang follows the setting, or the OS locale for system", () => {
+  const { resolveLang } = require("../src/lang");
+  assert.equal(resolveLang("zh", "en-US"), "zh");
+  assert.equal(resolveLang("en", "zh-CN"), "en");
+  assert.equal(resolveLang("system", "zh-CN"), "zh");
+  assert.equal(resolveLang("system", "en-GB"), "en");
+});

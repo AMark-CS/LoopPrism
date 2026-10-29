@@ -5,28 +5,29 @@ import { api } from '@/lib/api';
 import { useTrajectory } from '../../hooks/useSessions';
 import { formatMs } from '../../lib/format';
 import { Badge, Empty } from '../../components/ui';
+import { t, tServer } from '../../lib/i18n';
 import type { EventKind, Finding, SessionEvent, TrajectoryStep } from '../../types/sessions';
 
 const KIND_STYLE: Record<string, { label: string; cls: string }> = {
-  system: { label: 'SYSTEM', cls: 'bg-[var(--tone-system-bg)] text-[var(--tone-system-fg)]' },
-  user: { label: 'USER', cls: 'bg-[var(--tone-user-bg)] text-[var(--tone-user-fg)]' },
-  context: { label: 'CONTEXT', cls: 'bg-[var(--tone-ok-bg)] text-[var(--tone-ok-fg)]' },
-  assistant: { label: 'ASSISTANT', cls: 'bg-[var(--tone-primary-bg)] text-[var(--tone-primary-fg)]' },
-  thinking: { label: 'THINKING', cls: 'bg-[var(--tone-think-bg)] text-[var(--tone-think-fg)]' },
-  tool_call: { label: 'TOOL', cls: 'bg-[var(--tone-tool-bg)] text-[var(--tone-tool-fg)]' },
-  tool_result: { label: 'RESULT', cls: 'bg-[var(--tone-tool-bg)] text-[var(--tone-tool-fg)]' },
-  compaction: { label: 'COMPACT', cls: 'bg-[var(--tone-error-bg)] text-[var(--tone-error-fg)]' },
-  model_change: { label: 'MODEL', cls: 'bg-[var(--tone-model-bg)] text-[var(--tone-model-fg)]' },
-  system_event: { label: 'EVENT', cls: 'bg-[var(--tone-event-bg)] text-[var(--tone-event-fg)]' },
+  system: { label: t('SYSTEM'), cls: 'bg-[var(--tone-system-bg)] text-[var(--tone-system-fg)]' },
+  user: { label: t('USER'), cls: 'bg-[var(--tone-user-bg)] text-[var(--tone-user-fg)]' },
+  context: { label: t('CONTEXT'), cls: 'bg-[var(--tone-ok-bg)] text-[var(--tone-ok-fg)]' },
+  assistant: { label: t('ASSISTANT'), cls: 'bg-[var(--tone-primary-bg)] text-[var(--tone-primary-fg)]' },
+  thinking: { label: t('THINKING'), cls: 'bg-[var(--tone-think-bg)] text-[var(--tone-think-fg)]' },
+  tool_call: { label: t('TOOL'), cls: 'bg-[var(--tone-tool-bg)] text-[var(--tone-tool-fg)]' },
+  tool_result: { label: t('RESULT'), cls: 'bg-[var(--tone-tool-bg)] text-[var(--tone-tool-fg)]' },
+  compaction: { label: t('COMPACT'), cls: 'bg-[var(--tone-error-bg)] text-[var(--tone-error-fg)]' },
+  model_change: { label: t('MODEL'), cls: 'bg-[var(--tone-model-bg)] text-[var(--tone-model-fg)]' },
+  system_event: { label: t('EVENT'), cls: 'bg-[var(--tone-event-bg)] text-[var(--tone-event-fg)]' },
 };
 
 const FILTERS: { key: string; label: string; kinds: EventKind[] }[] = [
-  { key: 'user', label: 'User', kinds: ['user'] },
-  { key: 'assistant', label: 'Assistant', kinds: ['assistant', 'model_change'] },
-  { key: 'tools', label: 'Tools', kinds: ['tool_call', 'tool_result'] },
-  { key: 'context', label: 'Context', kinds: ['context', 'system', 'compaction'] },
-  { key: 'thinking', label: 'Thinking', kinds: ['thinking'] },
-  { key: 'events', label: 'Events', kinds: ['system_event'] },
+  { key: 'user', label: t('User'), kinds: ['user'] },
+  { key: 'assistant', label: t('Assistant'), kinds: ['assistant', 'model_change'] },
+  { key: 'tools', label: t('Tools'), kinds: ['tool_call', 'tool_result'] },
+  { key: 'context', label: t('Context'), kinds: ['context', 'system', 'compaction'] },
+  { key: 'thinking', label: t('Thinking'), kinds: ['thinking'] },
+  { key: 'events', label: t('Events'), kinds: ['system_event'] },
 ];
 
 function toolSummary(e: SessionEvent): string {
@@ -70,22 +71,22 @@ function Lanes({
                   : 'text-[var(--color-muted-foreground)]'
               }`}
             >
-              {m}
+              {m === 'duration' ? t('Duration') : t('Steps')}
             </button>
           ))}
         </div>
         <div className="flex gap-3 text-[10px] text-[var(--color-muted-foreground)]">
-          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#3b82f6]" />prompt</span>
-          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#22c55e]" />tool result</span>
-          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#8b5cf6]" />model</span>
-          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#f59e0b]" />tools</span>
+          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#3b82f6]" />{t('prompt')}</span>
+          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#22c55e]" />{t('tool result')}</span>
+          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#8b5cf6]" />{t('model')}</span>
+          <span><i className="mr-1 inline-block h-2 w-2 rounded-sm bg-[#f59e0b]" />{t('tools')}</span>
         </div>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
         <div className="flex shrink-0 flex-col gap-1 pt-0.5 text-[10px] text-[var(--color-muted-foreground)]">
-          <span className="h-3 leading-3">Input</span>
-          <span className="h-3 leading-3">Model</span>
-          <span className="h-3 leading-3">Tools</span>
+          <span className="h-3 leading-3">{t('Input')}</span>
+          <span className="h-3 leading-3">{t('Model')}</span>
+          <span className="h-3 leading-3">{t('Tools')}</span>
         </div>
         <div className="flex items-start">
           {main.map((s) => {
@@ -99,7 +100,7 @@ function Lanes({
               <button
                 key={s.step}
                 type="button"
-                title={`Step ${s.step + 1} · turn ${s.turn} · ${s.model}\nmodel ${formatMs(s.model_ms ?? 0)} · tools ${formatMs(s.tools_ms ?? 0)}\n${s.input_tokens.toLocaleString()} in / ${s.output_tokens.toLocaleString()} out`}
+                title={t('Step {step} · turn {turn} · {model}\nmodel {m} · tools {tl}\n{i} in / {o} out', { step: s.step + 1, turn: s.turn, model: s.model, m: formatMs(s.model_ms ?? 0), tl: formatMs(s.tools_ms ?? 0), i: s.input_tokens.toLocaleString(), o: s.output_tokens.toLocaleString() })}
                 onClick={() => onPick(s)}
                 style={{ width: w, marginLeft: first ? 6 : 1 }}
                 className="flex shrink-0 flex-col gap-1"
@@ -120,10 +121,10 @@ function FindingChip({ f, onPick }: { f: Finding; onPick: (idx: number) => void 
   const Icon = f.kind === 'repeated_call' ? Repeat : f.severity === 'error' ? AlertTriangle : Info;
   const tone = f.severity === 'error' ? 'error' : f.severity === 'warn' ? 'warn' : 'muted';
   return (
-    <button type="button" onClick={() => onPick(f.events[0])} title={`Turn ${f.turn}`}>
+    <button type="button" onClick={() => onPick(f.events[0])} title={t('Turn {n}', { n: f.turn })}>
       <Badge tone={tone}>
         <Icon className="mr-1 h-3 w-3" />
-        {f.title}
+        {tServer(f.title)}
       </Badge>
     </button>
   );
@@ -178,7 +179,7 @@ function EventRow({
           {style.label}
         </span>
         <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-foreground)]">
-          {text.replace(/\s+/g, ' ').slice(0, 300) || (e.kind === 'thinking' ? '(thinking)' : '')}
+          {text.replace(/\s+/g, ' ').slice(0, 300) || (e.kind === 'thinking' ? t('(thinking)') : '')}
           {isTool && result && (
             <span className="text-[var(--color-muted-foreground)]">
               {' → '}
@@ -186,8 +187,8 @@ function EventRow({
             </span>
           )}
         </span>
-        {isTool && result?.is_error && <Badge tone="error">error</Badge>}
-        {e.sidechain && <Badge>subagent</Badge>}
+        {isTool && result?.is_error && <Badge tone="error">{t('error')}</Badge>}
+        {e.sidechain && <Badge>{t('subagent')}</Badge>}
         {e.label && e.kind === 'context' && <Badge>{e.label}</Badge>}
       </button>
       {open && (
@@ -243,8 +244,8 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
       .map((e) => ({ e, result: e.tool_use_id ? results.get(e.tool_use_id) : undefined }));
   }, [events.data, filters, q]);
 
-  if (traj.isLoading || events.isLoading) return <Empty>Loading trajectory…</Empty>;
-  if (!traj.data) return <Empty>No data.</Empty>;
+  if (traj.isLoading || events.isLoading) return <Empty>{t('Loading trajectory…')}</Empty>;
+  if (!traj.data) return <Empty>{t('No data.')}</Empty>;
 
   let lastTurn = -1;
   return (
@@ -255,7 +256,7 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
       {traj.data.findings.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-            Worth a look
+            {t('Worth a look')}
           </span>
           {traj.data.findings.slice(0, 12).map((f, i) => (
             <FindingChip key={i} f={f} onPick={setFocusIdx} />
@@ -268,7 +269,7 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search this session"
+            placeholder={t('Search this session')}
             className="w-64 rounded-md border border-[var(--color-border)] bg-[var(--color-background)] py-1 pl-7 pr-2 text-xs outline-none focus:border-[var(--color-primary)]"
           />
         </div>
@@ -292,7 +293,7 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
           </button>
         ))}
         <span className="ml-auto text-[11px] text-[var(--color-muted-foreground)]">
-          {rows.length.toLocaleString()} rows
+          {t('{n} rows', { n: rows.length.toLocaleString() })}
         </span>
       </div>
       <div className="overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">
@@ -303,7 +304,7 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
             <div key={e.idx}>
               {showTurn && (
                 <div className="border-b border-[var(--color-border)] bg-[var(--color-background)] px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-muted-foreground)]">
-                  Turn {e.turn}
+                  {t('Turn {n}', { n: e.turn })}
                 </div>
               )}
               <EventRow e={e} result={result} id={id} focused={focusIdx === e.idx} />
@@ -316,12 +317,12 @@ export function TrajectoryTab({ id, focus }: { id: string; focus: number | null 
             onClick={() => setShown(shown + 1500)}
             className="w-full p-3 text-xs text-[var(--color-muted-foreground)] hover:bg-[var(--color-accent)]"
           >
-            Show more ({rows.length - shown} left)
+            {t('Show more ({n} left)', { n: rows.length - shown })}
           </button>
         )}
         {rows.length === 0 && (
           <div className="p-6 text-center text-xs text-[var(--color-muted-foreground)]">
-            Nothing matches.
+            {t('Nothing matches.')}
           </div>
         )}
       </div>

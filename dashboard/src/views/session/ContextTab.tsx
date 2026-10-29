@@ -3,6 +3,7 @@ import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis
 import { ChevronRight, HelpCircle } from 'lucide-react';
 import { useContextOverview, useCostBreakdown, useStepContext, useTiming } from '../../hooks/useSessions';
 import { Badge, Card, Empty } from '../../components/ui';
+import { t, tServer } from '../../lib/i18n';
 import {
   CATEGORY_COLORS,
   CATEGORY_LABELS,
@@ -31,10 +32,10 @@ const TYPE_COLORS: Record<string, string> = {
 };
 const MODEL_COLORS = ['#8b5cf6', '#3b82f6', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6'];
 const COST_HINTS: Record<string, string> = {
-  input: 'Input tokens that were not served from the prompt cache',
-  cache_read: 'Re-reading the conversation so far from the prompt cache, once per step',
-  cache_write: 'Writing new content into the prompt cache',
-  output: 'Tokens the model generated (answers, thinking, tool-call arguments)',
+  input: t('Input tokens that were not served from the prompt cache'),
+  cache_read: t('Re-reading the conversation so far from the prompt cache, once per step'),
+  cache_write: t('Writing new content into the prompt cache'),
+  output: t('Tokens the model generated (answers, thinking, tool-call arguments)'),
 };
 
 function CostDistribution({ id }: { id: string }) {
@@ -43,27 +44,27 @@ function CostDistribution({ id }: { id: string }) {
   if (!data || !data.total_usd) return null;
   const rows =
     view === 'type'
-      ? data.by_type.map((r) => ({ key: r.key, label: r.label, usd: r.usd, color: TYPE_COLORS[r.key], hint: COST_HINTS[r.key] }))
+      ? data.by_type.map((r) => ({ key: r.key, label: tServer(r.label), usd: r.usd, color: TYPE_COLORS[r.key], hint: COST_HINTS[r.key] }))
       : view === 'category'
         ? data.by_category.map((r) => ({
             key: r.key,
-            label: r.label,
+            label: tServer(r.label),
             usd: r.usd,
             color: r.key === 'output' ? TYPE_COLORS.output : CATEGORY_COLORS[r.key] ?? '#6b7280',
-            hint: r.key === 'output' ? COST_HINTS.output : 'Input-side cost (fresh + cached) shared by how much of each step’s context this was',
+            hint: r.key === 'output' ? COST_HINTS.output : t('Input-side cost (fresh + cached) shared by how much of each step’s context this was'),
           }))
         : data.by_model.map((r, i) => ({ key: r.model, label: r.model, usd: r.usd, color: MODEL_COLORS[i % MODEL_COLORS.length], hint: '' }));
   const total = rows.reduce((a, r) => a + r.usd, 0) || 1;
   const turns = data.by_turn.slice(-60);
-  const maxTurn = Math.max(...turns.map((t) => t.usd), 0.0001);
+  const maxTurn = Math.max(...turns.map((x) => x.usd), 0.0001);
   return (
     <Card
-      title="Cost Distribution"
+      title={t('Cost Distribution')}
       right={
         <div className="flex items-center gap-2">
-          <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">{formatUsd(data.total_usd)} at API prices</span>
+          <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">{t('{c} at API prices', { c: formatUsd(data.total_usd) })}</span>
           <div className="flex gap-1">
-            {([['type', 'Token type'], ['category', 'Context'], ['model', 'Model']] as const).map(([k, label]) => (
+            {([['type', t('Token type')], ['category', t('Context')], ['model', t('Model')]] as const).map(([k, label]) => (
               <button
                 key={k}
                 type="button"
@@ -80,7 +81,7 @@ function CostDistribution({ id }: { id: string }) {
       }
     >
       <div className="flex flex-wrap items-start gap-6">
-        <Donut data={rows.map((r) => ({ key: r.key, value: r.usd, color: r.color }))} center={formatUsd(data.total_usd)} sub="Total" />
+        <Donut data={rows.map((r) => ({ key: r.key, value: r.usd, color: r.color }))} center={formatUsd(data.total_usd)} sub={t('Total')} />
         <div className="min-w-[260px] flex-1 space-y-2.5">
           {rows.map((r) => (
             <div key={r.key} title={r.hint}>
@@ -102,19 +103,19 @@ function CostDistribution({ id }: { id: string }) {
       {turns.length > 1 && (
         <div className="mt-4 border-t border-[var(--color-border)] pt-3">
           <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--color-muted-foreground)]">
-            <span>Cost per turn</span>
+            <span>{t('Cost per turn')}</span>
             <span>
-              Priciest steps:{' '}
+              {t('Priciest steps:')}{' '}
               {data.top_steps.slice(0, 3).map((s) => `#${s.step + 1} ${formatUsd(s.usd)}`).join(' · ')}
             </span>
           </div>
           <div className="flex h-12 items-end gap-px">
-            {turns.map((t) => (
+            {turns.map((x) => (
               <div
-                key={t.turn}
-                title={`Turn ${t.turn}: ${formatUsd(t.usd)}`}
+                key={x.turn}
+                title={t('Turn {n}: {c}', { n: x.turn, c: formatUsd(x.usd) })}
                 className="flex-1 rounded-t-sm bg-[#8b5cf6]"
-                style={{ height: `${Math.max(4, (t.usd / maxTurn) * 100)}%` }}
+                style={{ height: `${Math.max(4, (x.usd / maxTurn) * 100)}%` }}
               />
             ))}
           </div>
@@ -122,7 +123,7 @@ function CostDistribution({ id }: { id: string }) {
       )}
       {data.unpriced_steps > 0 && (
         <div className="mt-2 text-[10px] text-[var(--color-muted-foreground)]">
-          {data.unpriced_steps} steps use a model without a published price and are not counted.
+          {t('{n} steps use a model without a published price and are not counted.', { n: data.unpriced_steps })}
         </div>
       )}
     </Card>
@@ -203,13 +204,13 @@ function ContextBar({ step }: { step: StepContext }) {
         <div>
           <span className="text-2xl font-semibold tabular-nums">{formatTokens(step.actual_input)}</span>
           <span className="ml-1 text-sm text-[var(--color-muted-foreground)]">
-            / {step.window ? formatTokens(step.window) : '?'} tokens
+            / {step.window ? formatTokens(step.window) : '?'} {t('tokens')}
           </span>
         </div>
         {step.window_pct != null && (
           <div className="text-right">
             <span className="text-2xl font-semibold tabular-nums">{Math.round(step.window_pct)}%</span>
-            <span className="ml-1 text-xs text-[var(--color-muted-foreground)]">of context used</span>
+            <span className="ml-1 text-xs text-[var(--color-muted-foreground)]">{t('of context used')}</span>
           </div>
         )}
       </div>
@@ -228,7 +229,7 @@ function ContextBar({ step }: { step: StepContext }) {
       </div>
       {step.window_source === 'assumed' && (
         <div className="mt-1 text-[10px] text-[var(--color-muted-foreground)]">
-          Context window assumed for this model.
+          {t('Context window assumed for this model.')}
         </div>
       )}
     </div>
@@ -260,7 +261,7 @@ function Trend({
   );
   return (
     <Card
-      title="Context Trend"
+      title={t('Context Trend')}
       right={
         <div className="flex gap-1">
           {(['total', 'delta'] as const).map((m) => (
@@ -272,7 +273,7 @@ function Trend({
                 mode === m ? 'bg-[var(--color-foreground)] text-[var(--color-background)]' : 'text-[var(--color-muted-foreground)]'
               }`}
             >
-              {m}
+              {m === 'total' ? t('Total') : t('Change')}
             </button>
           ))}
         </div>
@@ -294,7 +295,7 @@ function Trend({
               cursor={{ fill: 'var(--hover)' }}
               contentStyle={{ background: 'var(--tooltip-bg)', border: '1px solid var(--color-border)', fontSize: 11 }}
               formatter={(v, name) => [formatTokens(Number(v)), CATEGORY_LABELS[String(name)] ?? String(name)]}
-              labelFormatter={(l) => `Step ${l}`}
+              labelFormatter={(l) => t('Step {n}', { n: String(l) })}
             />
             {mode === 'total' ? (
               ORDER.map((k) => (
@@ -318,19 +319,19 @@ function Browser({ id, step }: { id: string; step: number }) {
   const cur = useStepContext(id, step);
   const prev = useStepContext(id, step > 0 ? step - 1 : null);
   const [open, setOpen] = useState<Set<string>>(new Set());
-  if (cur.isLoading) return <Empty>Loading step…</Empty>;
+  if (cur.isLoading) return <Empty>{t('Loading step…')}</Empty>;
   if (!cur.data) return null;
   const c = cur.data;
   const prevItems = (k: CategoryKey) => prev.data?.categories.find((x) => x.key === k)?.items ?? 0;
   return (
     <Card
-      title="Context Browser"
+      title={t('Context Browser')}
       right={
         <div className="flex items-center gap-2 text-[11px] text-[var(--color-muted-foreground)]">
-          <Badge tone={c.exact_request ? 'ok' : 'warn'} title={c.exact_request ? 'The real request is recorded in the session file.' : 'The system prompt and tool schemas are not recorded; they are inferred.'}>
-            {c.exact_request ? 'Exact request' : 'Estimated'}
+          <Badge tone={c.exact_request ? 'ok' : 'warn'} title={c.exact_request ? t('The real request is recorded in the session file.') : t('The system prompt and tool schemas are not recorded; they are inferred.')}>
+            {c.exact_request ? t('Exact request') : t('Estimated')}
           </Badge>
-          Step {c.step + 1} · Estimated ≈{formatTokens(c.estimated_input)} · Actual {formatTokens(c.actual_input)}
+          {t('Step {n} · Estimated ≈{e} · Actual {a}', { n: c.step + 1, e: formatTokens(c.estimated_input), a: formatTokens(c.actual_input) })}
         </div>
       }
     >
@@ -356,7 +357,7 @@ function Browser({ id, step }: { id: string; step: number }) {
                 <ChevronRight className={`h-3 w-3 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                 <i className="inline-block h-2 w-2 rounded-sm" style={{ background: CATEGORY_COLORS[k] }} />
                 <span className="font-medium">{CATEGORY_LABELS[k]}</span>
-                <span className="text-[var(--color-muted-foreground)]">{cat.items} items</span>
+                <span className="text-[var(--color-muted-foreground)]">{t('{n} items', { n: cat.items })}</span>
                 {added > 0 && <Badge tone="ok">+{added}</Badge>}
                 <span className="ml-auto tabular-nums text-[var(--color-muted-foreground)]">
                   ≈{formatTokens(cat.tokens)} · {cat.pct}%
@@ -373,7 +374,7 @@ function Browser({ id, step }: { id: string; step: number }) {
                   ))}
                   {items.length > 400 && (
                     <div className="px-3 py-1.5 text-[11px] text-[var(--color-muted-foreground)]">
-                      … {items.length - 400} more
+                      {t('… {n} more', { n: items.length - 400 })}
                     </div>
                   )}
                 </div>
@@ -391,35 +392,35 @@ export function ContextTab({ id }: { id: string }) {
   const timing = useTiming(id);
   const [selected, setSelected] = useState<number | null>(null);
   const lastStep = useMemo(() => {
-    const t = overview.data?.trend.filter((p) => !p.sidechain) ?? [];
-    return t.length ? t[t.length - 1].step : null;
+    const pts = overview.data?.trend.filter((p) => !p.sidechain) ?? [];
+    return pts.length ? pts[pts.length - 1].step : null;
   }, [overview.data]);
   useEffect(() => setSelected(null), [id]);
   const step = selected ?? lastStep;
   const stepCtx = useStepContext(id, step);
 
-  if (overview.isLoading) return <Empty>Analysing context…</Empty>;
-  if (!overview.data) return <Empty>No data.</Empty>;
+  if (overview.isLoading) return <Empty>{t('Analysing context…')}</Empty>;
+  if (!overview.data) return <Empty>{t('No data.')}</Empty>;
   const { stats, trend } = overview.data;
-  if (!trend.length) return <Empty>This session has no model calls yet.</Empty>;
-  const t = timing.data;
+  if (!trend.length) return <Empty>{t('This session has no model calls yet.')}</Empty>;
+  const tm = timing.data;
 
   return (
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
-      <Card title="Context Stats" right={<Badge tone={stats.fidelity === 'exact' ? 'ok' : 'warn'}>{stats.fidelity === 'exact' ? 'Exact requests' : 'Estimated'}</Badge>}>
+      <Card title={t('Context Stats')} right={<Badge tone={stats.fidelity === 'exact' ? 'ok' : 'warn'}>{stats.fidelity === 'exact' ? t('Exact requests') : t('Estimated')}</Badge>}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
-          <Stat label="Turns" value={String(stats.turns)} />
-          <Stat label="Steps" value={String(stats.steps)} hint="Model calls (one per assistant response)" />
-          <Stat label="Human inputs" value={String(stats.human_inputs)} />
-          <Stat label="Tool calls" value={String(stats.tool_calls)} />
-          <Stat label="Cache hit" value={stats.cache_hit_pct != null ? `${stats.cache_hit_pct}%` : '—'} hint="Share of input tokens served from the prompt cache" />
-          <Stat label="Cost" value={stats.cost_usd != null ? formatUsd(stats.cost_usd) : '—'} hint="Estimated at current API prices" />
-          <Stat label="Subagent cost" value={stats.subagent_cost_usd != null ? formatUsd(stats.subagent_cost_usd) : '—'} />
+          <Stat label={t('Turns')} value={String(stats.turns)} />
+          <Stat label={t('Steps')} value={String(stats.steps)} hint={t('Model calls (one per assistant response)')} />
+          <Stat label={t('Human inputs')} value={String(stats.human_inputs)} />
+          <Stat label={t('Tool calls')} value={String(stats.tool_calls)} />
+          <Stat label={t('Cache hit')} value={stats.cache_hit_pct != null ? `${stats.cache_hit_pct}%` : '—'} hint={t('Share of input tokens served from the prompt cache')} />
+          <Stat label={t('Cost')} value={stats.cost_usd != null ? formatUsd(stats.cost_usd) : '—'} hint={t('Estimated at current API prices')} />
+          <Stat label={t('Subagent cost')} value={stats.subagent_cost_usd != null ? formatUsd(stats.subagent_cost_usd) : '—'} />
         </div>
       </Card>
 
       <div className="grid gap-3 2xl:grid-cols-2">
-        <Card title="Token Stats" right={step !== null && <span className="text-[11px] text-[var(--color-muted-foreground)]">Step {step + 1}</span>}>
+        <Card title={t('Token Stats')} right={step !== null && <span className="text-[11px] text-[var(--color-muted-foreground)]">{t('Step {n}', { n: step + 1 })}</span>}>
           {stepCtx.data ? (
             <div className="flex flex-wrap items-center gap-5">
               <Donut
@@ -434,34 +435,34 @@ export function ContextTab({ id }: { id: string }) {
           )}
         </Card>
         <Card
-          title="Timing Stats"
-          right={t?.tokens_per_second ? <Badge>{t.tokens_per_second} tok/s</Badge> : undefined}
+          title={t('Timing Stats')}
+          right={tm?.tokens_per_second ? <Badge>{tm.tokens_per_second} tok/s</Badge> : undefined}
         >
-          {t ? (
+          {tm ? (
             <div className="flex flex-wrap items-center gap-5">
               <Donut
                 data={[
-                  { key: 'assistant', value: t.thinking_ms },
-                  { key: 'user', value: t.answer_ms },
-                  { key: 'tool_schemas', value: t.tools_ms },
-                  { key: 'unattributed', value: t.overhead_ms },
+                  { key: 'assistant', value: tm.thinking_ms },
+                  { key: 'user', value: tm.answer_ms },
+                  { key: 'tool_schemas', value: tm.tools_ms },
+                  { key: 'unattributed', value: tm.overhead_ms },
                 ]}
-                center={formatMs(t.model_ms + t.tools_ms)}
-                sub="Active time"
+                center={formatMs(tm.model_ms + tm.tools_ms)}
+                sub={t('Active time')}
               />
               <div className="grid min-w-[220px] flex-1 grid-cols-2 gap-x-6 gap-y-3 text-xs">
                 {[
-                  ['assistant', 'Thinking', t.thinking_ms],
-                  ['user', 'Answer', t.answer_ms],
-                  ['tool_schemas', 'Tool runs', t.tools_ms],
-                  ['unattributed', 'Overhead', t.overhead_ms],
+                  ['assistant', t('Thinking'), tm.thinking_ms],
+                  ['user', t('Answer'), tm.answer_ms],
+                  ['tool_schemas', t('Tool runs'), tm.tools_ms],
+                  ['unattributed', t('Overhead'), tm.overhead_ms],
                 ].map(([k, label, ms]) => (
                   <div key={String(k)}>
                     <div className="flex items-center gap-1.5">
                       <i className="inline-block h-2 w-2 rounded-sm" style={{ background: CATEGORY_COLORS[String(k)] }} />
                       {label}
                       <span className="ml-auto tabular-nums">
-                        {Math.round((Number(ms) / (t.thinking_ms + t.answer_ms + t.tools_ms + t.overhead_ms || 1)) * 100)}%
+                        {Math.round((Number(ms) / (tm.thinking_ms + tm.answer_ms + tm.tools_ms + tm.overhead_ms || 1)) * 100)}%
                       </span>
                     </div>
                     <div className="pl-3.5 text-[11px] tabular-nums text-[var(--color-muted-foreground)]">
@@ -475,14 +476,14 @@ export function ContextTab({ id }: { id: string }) {
             <Empty>…</Empty>
           )}
           <div className="mt-2 text-[10px] text-[var(--color-muted-foreground)]">
-            From session timestamps. Time to first token needs the API capture proxy.
+            {t('From session timestamps. Time to first token needs the API capture proxy.')}
           </div>
         </Card>
       </div>
 
       <CostDistribution id={id} />
 
-      <Card title="Current Context" right={stepCtx.data && <span className="text-[11px] text-[var(--color-muted-foreground)]">{stepCtx.data.model}</span>}>
+      <Card title={t('Current Context')} right={stepCtx.data && <span className="text-[11px] text-[var(--color-muted-foreground)]">{stepCtx.data.model}</span>}>
         {stepCtx.data ? <ContextBar step={stepCtx.data} /> : <Empty>…</Empty>}
       </Card>
 

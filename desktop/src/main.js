@@ -14,6 +14,7 @@ const {
 const agents = require("./agents");
 const { Updater } = require("./updater");
 const { Settings } = require("./settings");
+const { resolveLang, trayText } = require("./lang");
 const { Sidecar } = require("./sidecar");
 
 const isDev = !app.isPackaged;
@@ -66,36 +67,38 @@ function trayIcon() {
 
 function updateTray() {
   if (!tray) return;
+  const lang = resolveLang(settings.get("language"), app.getLocale());
+  const T = (text) => trayText(lang, text);
   const running = status.state === "running";
   tray.setToolTip(
     running
-      ? `LoopPrism — proxy on ${status.proxyUrl.replace("http://", "")}`
-      : `LoopPrism — ${STATUS_LABEL[status.state]}`,
+      ? `LoopPrism — ${T("proxy on")} ${status.proxyUrl.replace("http://", "")}`
+      : `LoopPrism — ${T(STATUS_LABEL[status.state])}`,
   );
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
-        label: `LoopPrism: ${STATUS_LABEL[status.state]}${status.external ? " (existing proxy)" : ""}`,
+        label: `LoopPrism: ${T(STATUS_LABEL[status.state])}${status.external ? ` ${T("(existing proxy)")}` : ""}`,
         enabled: false,
       },
       ...(status.proxyUrl
-        ? [{ label: `Proxy ${status.proxyUrl}`, enabled: false }]
+        ? [{ label: `${T("Proxy")} ${status.proxyUrl}`, enabled: false }]
         : []),
       { type: "separator" },
-      { label: "Sessions", click: () => showWindow("sessions") },
-      { label: "Cost", click: () => showWindow("cost") },
-      { label: "Optimize", click: () => showWindow("optimize") },
-      { label: "Apps…", click: () => showWindow("apps") },
+      { label: T("Sessions"), click: () => showWindow("sessions") },
+      { label: T("Cost"), click: () => showWindow("cost") },
+      { label: T("Optimize"), click: () => showWindow("optimize") },
+      { label: T("Apps…"), click: () => showWindow("apps") },
       {
-        label: "Copy proxy URL",
+        label: T("Copy proxy URL"),
         enabled: Boolean(status.proxyUrl),
         click: () => clipboard.writeText(status.proxyUrl),
       },
       { type: "separator" },
-      { label: "Restart proxy", click: () => sidecar.restart() },
-      { label: "Show logs", click: () => shell.openPath(sidecar.logFile) },
+      { label: T("Restart proxy"), click: () => sidecar.restart() },
+      { label: T("Show logs"), click: () => shell.openPath(sidecar.logFile) },
       { type: "separator" },
-      { label: "Quit LoopPrism", click: () => app.quit() },
+      { label: T("Quit LoopPrism"), click: () => app.quit() },
     ]),
   );
 }
@@ -225,6 +228,7 @@ function registerIpc() {
     const before = settings.all();
     const values = settings.update(patch);
     if ("theme" in patch) nativeTheme.themeSource = values.theme;
+    if ("language" in patch) updateTray();
     if ("openAtLogin" in patch) {
       app.setLoginItemSettings({ openAtLogin: values.openAtLogin, openAsHidden: true, args: [HIDDEN_FLAG] });
     }
