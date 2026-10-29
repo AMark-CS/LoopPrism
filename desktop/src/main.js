@@ -84,6 +84,7 @@ function updateTray() {
       { type: "separator" },
       { label: "Sessions", click: () => showWindow("sessions") },
       { label: "Cost", click: () => showWindow("cost") },
+      { label: "Optimize", click: () => showWindow("optimize") },
       { label: "Apps…", click: () => showWindow("apps") },
       {
         label: "Copy proxy URL",
@@ -313,7 +314,7 @@ async function runTour(dir) {
   win.setSize(tw, th);
   win.webContents.setZoomFactor(Number(process.env.LPRISM_TOUR_ZOOM || 1));
   await wait(2500);
-  for (const tab of ["sessions", "cost", "apps", "settings"]) {
+  for (const tab of ["sessions", "cost", "optimize", "apps", "settings"]) {
     showWindow(tab);
     await wait(3000);
     await shot(tab);

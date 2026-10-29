@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { useCostOverview } from '../hooks/useSessions';
+import { useCostOverview, useOptimize } from '../hooks/useSessions';
 import { Card, Empty } from '../components/ui';
 import { formatTokens, formatUsd } from '../lib/format';
 import type { CostRow } from '../types/sessions';
@@ -85,6 +85,7 @@ export function CostView() {
   const [days, setDays] = useState<number>(30);
   const [agent, setAgent] = useState('');
   const { data, isLoading } = useCostOverview(days, agent || undefined);
+  const opt = useOptimize(days || 365, agent || undefined).data;
 
   const pill = (active: boolean) =>
     `rounded-full border px-2.5 py-0.5 text-[11px] ${
@@ -136,6 +137,14 @@ export function CostView() {
             <Tile label="Cache hit" value={cacheHit == null ? '—' : `${cacheHit.toFixed(1)}%`} hint="of input read from cache" />
             <Tile label="Per session" value={t.cost != null && t.sessions ? formatUsd(t.cost / t.sessions) : '—'} hint="average" />
           </div>
+
+          {opt && opt.suggestions.length > 0 && (
+            <a href="#/optimize" className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-[var(--color-primary)] bg-[var(--tone-primary-bg)] px-4 py-3 text-sm hover:opacity-90">
+              <span className="font-medium text-[var(--tone-primary-fg)]">{opt.suggestions.length} way{opt.suggestions.length > 1 ? 's' : ''} to spend less</span>
+              <span className="text-[var(--color-foreground)]">about {formatUsd(opt.saving_usd)} (−{opt.saving_pct}%) in this period</span>
+              <span className="ml-auto text-xs text-[var(--tone-primary-fg)]">See the suggestions →</span>
+            </a>
+          )}
 
           <Card title="Spend per day">
             <div className="h-48">

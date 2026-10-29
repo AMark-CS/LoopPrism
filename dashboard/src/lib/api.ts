@@ -75,6 +75,21 @@ export const api = {
     ),
 
   // Sessions (inspector)
+  optimize: (days: number, agent?: string) =>
+    get<S.OptimizeResult>(`/api/sessions/optimize?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}`),
+  optimizeAction: (rule: string, action: 'adopt' | 'dismiss' | 'reset') => post<unknown>(`/api/sessions/optimize/${rule}/${action}`),
+  optimizeTools: (refresh = false) => get<{ tools: S.ToolRec[]; fetched_at: number | null; source: string }>(`/api/sessions/optimize/tools?refresh=${refresh}`),
+  optimizeSettings: () => get<S.OptimizeSettings>('/api/sessions/optimize/settings'),
+  saveOptimizeSettings: async (body: unknown) => {
+    const res = await fetch('/api/sessions/optimize/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).detail ?? `${res.status} ${res.statusText}`);
+    return res.json() as Promise<S.OptimizeSettings>;
+  },
+  aiPreview: (days: number, agent?: string) =>
+    post<{ endpoint: string | null; model: string; ready: boolean; messages: { role: string; content: string }[] }>(
+      `/api/sessions/optimize/ai/preview?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}&language=${navigator.language.startsWith('zh') ? 'zh' : 'en'}`),
+  aiRun: (days: number, agent?: string) =>
+    post<{ text: string }>(`/api/sessions/optimize/ai/run?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}&language=${navigator.language.startsWith('zh') ? 'zh' : 'en'}`),
   costOverview: (days: number, agent?: string) =>
     get<S.CostOverview>(`/api/sessions/cost/overview?days=${days}${agent ? `&agent=${encodeURIComponent(agent)}` : ''}`),
   listSessions: (params: { q?: string; agent?: string; project?: string }) => {

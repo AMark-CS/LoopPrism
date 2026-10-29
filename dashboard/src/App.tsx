@@ -3,6 +3,7 @@ import { Activity } from 'lucide-react';
 import { useRoute } from './lib/route';
 import { CostView } from './views/CostView';
 import { LiveView } from './views/LiveView';
+import { OptimizeView } from './views/OptimizeView';
 import { SessionsView } from './views/SessionsView';
 
 // Inside the desktop app the sidebar already provides navigation.
@@ -11,12 +12,13 @@ const inDesktopApp = window.parent !== window;
 const VIEWS = [
   { key: 'sessions', label: 'Sessions' },
   { key: 'cost', label: 'Cost' },
+  { key: 'optimize', label: 'Optimize' },
 ] as const;
 
 export default function App() {
   const [seg, go] = useRoute();
   // #/live is the old run viewer (MCP and hook runs); it is reached from the Cost page.
-  const view = seg[0] === 'live' ? 'live' : seg[0] === 'cost' ? 'cost' : 'sessions';
+  const view = seg[0] === 'live' ? 'live' : seg[0] === 'cost' ? 'cost' : seg[0] === 'optimize' ? 'optimize' : 'sessions';
   return (
     <div className="flex h-screen flex-col">
       {!inDesktopApp && (
@@ -41,7 +43,7 @@ export default function App() {
           ))}
         </nav>
       )}
-      {view === 'live' ? <LiveView /> : view === 'cost' ? <CostView /> : <SessionsView />}
+      {view === 'live' ? <LiveView /> : view === 'cost' ? <CostView /> : view === 'optimize' ? <OptimizeView /> : <SessionsView />}
     </div>
   );
 }
