@@ -5,7 +5,7 @@ name: Windows smoke test
 on:
   workflow_dispatch: {}
   push:
-    branches: [windows-support]
+    branches: [windows-support, "feat/**"]
   pull_request:
     branches: [main]
     paths: ["desktop/**", "npm/**", "src/**", "dashboard/**", ".github/workflows/windows-smoke.yml"]
