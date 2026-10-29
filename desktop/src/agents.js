@@ -22,6 +22,13 @@ const AGENTS = [
     afterConnect: "Restart WorkBuddy so it picks up the hooks.",
   },
   {
+    id: "opencode",
+    name: "OpenCode",
+    blurb:
+      "Records every prompt and tool call as a run. Adds a plugin to ~/.config/opencode/plugins.",
+    afterConnect: "Restart OpenCode so it loads the plugin.",
+  },
+  {
     id: "codex",
     name: "Codex",
     blurb:
@@ -33,12 +40,6 @@ const AGENTS = [
 
 // Read from their own files on disk: nothing to connect, so no switch.
 const READ_ONLY = [
-  {
-    id: "opencode",
-    name: "OpenCode",
-    readOnly: true,
-    blurb: "Its sessions are read from OpenCode's own database (~/.local/share/opencode). Nothing to set up.",
-  },
   {
     id: "dsh",
     name: "DeepSeek Harness",
@@ -172,7 +173,7 @@ async function lastSeen(dashboardUrl) {
       } catch {
         continue;
       }
-      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy" }[agent];
+      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode" }[agent];
       const at = Date.parse(`${String(t.timestamp).replace(" ", "T")}Z`);
       if (key && (!seen[key] || at > seen[key])) seen[key] = at;
     }

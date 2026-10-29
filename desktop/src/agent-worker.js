@@ -15,6 +15,7 @@ const root = process.env.LPRISM_AGENT_ROOT;
 const claude = require(path.join(root, "lib", "claude"));
 const codex = require(path.join(root, "lib", "codex"));
 const workbuddy = require(path.join(root, "lib", "workbuddy"));
+const opencode = require(path.join(root, "lib", "opencode"));
 const { codexHome } = require(path.join(root, "lib", "paths"));
 
 function hasCli(name) {
@@ -50,11 +51,18 @@ function status() {
   } catch (err) {
     out.workbuddy.error = err.message;
   }
+  out.opencode = { cli: false, found: false, connected: false };
+  try {
+    out.opencode.found = opencode.available();
+    out.opencode.connected = opencode.isInstalled();
+  } catch (err) {
+    out.opencode.error = err.message;
+  }
   return out;
 }
 
 function run(action, target) {
-  const mod = { claude, codex, workbuddy }[target];
+  const mod = { claude, codex, workbuddy, opencode }[target];
   if (!mod) throw new Error(`unknown app: ${target}`);
   if (action === "install") mod.install();
   else if (action === "uninstall") mod.uninstall();

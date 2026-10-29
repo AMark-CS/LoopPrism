@@ -6,6 +6,7 @@ const claude = require('../lib/claude');
 const { atomicWrite } = require('../lib/fsutil');
 const codex = require('../lib/codex');
 const workbuddy = require('../lib/workbuddy');
+const opencode = require('../lib/opencode');
 const { configPath } = require('../plugin/scripts/config');
 const viewer = require('../plugin/scripts/viewer');
 const { version } = require('../package.json');
@@ -13,8 +14,8 @@ const { version } = require('../package.json');
 const HELP = `lpa ${version}: LoopPrism for Claude Code and Codex
 
 Usage
-  lpa install [claude|codex|workbuddy|all] [--url <api-url>]   add the hooks (default: all that are found)
-  lpa uninstall [claude|codex|workbuddy|all]                   remove them
+  lpa install [claude|codex|workbuddy|opencode|all] [--url <api-url>]   add the hooks (default: all that are found)
+  lpa uninstall [claude|codex|workbuddy|opencode|all]                   remove them
   lpa status                                         is LoopPrism up? latest runs
   lpa open                                           open the desktop app or dashboard
 
@@ -38,6 +39,7 @@ function pick(targets) {
     claude: all || targets.includes('claude'),
     codex: all || targets.includes('codex'),
     workbuddy: all || targets.includes('workbuddy'),
+    opencode: all || targets.includes('opencode'),
     explicit: !all,
   };
 }
@@ -91,6 +93,20 @@ async function main(argv) {
         }
       }
     }
+    if (want.opencode) {
+      if (!opencode.available() && !want.explicit) {
+        console.log('OpenCode: not found, skipped.');
+      } else {
+        try {
+          const r = opencode.install();
+          console.log(`OpenCode: plugin written to ${r.file}`);
+          console.log('          Restart OpenCode so it loads the plugin.');
+        } catch (err) {
+          console.error(`OpenCode: ${err.message}`);
+          failed = true;
+        }
+      }
+    }
     console.log('\nNext: start LoopPrism (desktop app, or `lprism proxy`), then use your agent. `lpa status` shows the runs.');
     return failed ? 1 : 0;
   }
@@ -99,6 +115,7 @@ async function main(argv) {
     if (want.claude && claude.available()) claude.uninstall();
     if (want.codex) codex.uninstall();
     if (want.workbuddy && workbuddy.available()) workbuddy.uninstall();
+    if (want.opencode) opencode.uninstall();
     console.log('LoopPrism hooks removed.');
     return 0;
   }

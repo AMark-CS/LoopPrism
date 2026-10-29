@@ -28,8 +28,8 @@
     "LoopPrism turned on monitoring for the apps it found on this PC. Switch off any you don't want.":
       "LoopPrism 已为在这台电脑上找到的应用开启监控,不需要的可以关掉。",
     "Got it": "知道了",
-    "The sessions of all five apps are read from disk and appear under Sessions, whether or not monitoring is switched on. The switch adds live runs.":
-      "五个应用的会话都会直接从磁盘读取并显示在“会话”中,无论是否开启监控。开关用于额外记录实时运行。",
+    "The sessions of all five apps are read from disk and appear under Sessions, whether or not monitoring is switched on. The switch adds live runs. DeepSeek Harness has no switch yet.":
+      "五个应用的会话都会直接从磁盘读取并显示在“会话”中,无论是否开启监控。开关用于额外记录实时运行;DeepSeek Harness 暂无开关。",
     "Other MCP clients": "其他 MCP 客户端",
     "Any client that talks to MCP servers over HTTP can be recorded by pointing it at the proxy instead of the server.":
       "任何通过 HTTP 连接 MCP 服务器的客户端,只要指向代理而不是服务器,就能被记录。",
@@ -73,7 +73,6 @@
     "just now": "刚刚",
     "Read from disk": "从磁盘读取",
     "{n} sessions": "{n} 个会话",
-    "Its sessions are read from OpenCode's own database (~/.local/share/opencode). Nothing to set up.": "它的会话直接从 OpenCode 自己的数据库(~/.local/share/opencode)读取,无需设置。",
     "Its sessions are read from the files DeepSeek Harness keeps on disk. Nothing to set up, and no live-run hook yet.": "它的会话直接从 DeepSeek Harness 保存在磁盘上的文件读取,无需设置,暂无实时钩子。",
     "{n} min ago": "{n} 分钟前",
     "{n} h ago": "{n} 小时前",
@@ -101,6 +100,8 @@
     "Records every prompt, tool call and error as a run. Adds hooks to ~/.codex/hooks.json.":
       "把每条提示词、工具调用和错误记录为一次运行。会在 ~/.codex/hooks.json 中添加钩子。",
     "Restart running Claude Code sessions to start recording.": "重启正在运行的 Claude Code 会话以开始记录。",
+    "Records every prompt and tool call as a run. Adds a plugin to ~/.config/opencode/plugins.": "把每条提示词和工具调用记录为一次运行。会在 ~/.config/opencode/plugins 中添加插件。",
+    "Restart OpenCode so it loads the plugin.": "重启 OpenCode 以加载插件。",
     "Restart WorkBuddy so it picks up the hooks.": "重启 WorkBuddy 以加载钩子。",
     "Open Codex and run /hooks once to review and trust the LoopPrism hooks.":
       "打开 Codex 并运行一次 /hooks,以审查并信任 LoopPrism 的钩子。",
