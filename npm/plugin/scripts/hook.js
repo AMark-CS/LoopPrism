@@ -26,6 +26,10 @@ const EVENTS = {
   PostToolUseFailure: 'tool_failure',
   Stop: 'stop',
   SessionEnd: 'session_end',
+  // Gemini CLI's names for the same moments.
+  BeforeAgent: 'prompt',
+  AfterTool: 'tool',
+  AfterAgent: 'stop',
 };
 
 // Claude Code feeds some automatic messages back as prompts (system reminders,
@@ -56,8 +60,11 @@ function clip(value, depth = 0) {
 
 /** Map a hook payload to a LoopPrism ingest event, or null if it should be skipped. */
 function buildEvent(input, agent, env = process.env) {
-  const kind = EVENTS[input && input.hook_event_name];
+  let kind = EVENTS[input && input.hook_event_name];
   if (!kind || !input.session_id) return null;
+  // Gemini CLI reports a failed tool in the result of AfterTool.
+  const failedResult = input.hook_event_name === 'AfterTool' && input.tool_response && input.tool_response.error;
+  if (failedResult) kind = 'tool_failure';
   const event = {
     agent,
     event: kind,
@@ -76,7 +83,7 @@ function buildEvent(input, agent, env = process.env) {
     event.tool_use_id = input.tool_use_id;
     event.duration_ms = input.duration_ms;
     if (kind === 'tool') event.tool_response = clip(input.tool_response);
-    else event.error = clip(input.error);
+    else event.error = clip(input.error || (failedResult && String(failedResult.message || failedResult)));
   }
   return event;
 }

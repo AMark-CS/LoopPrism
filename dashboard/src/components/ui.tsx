@@ -34,7 +34,7 @@ export function Badge({
   title,
 }: {
   children: ReactNode;
-  tone?: 'muted' | 'primary' | 'ok' | 'warn' | 'error' | 'violet';
+  tone?: 'muted' | 'primary' | 'ok' | 'warn' | 'error' | 'violet' | 'model' | 'event';
   title?: string;
 }) {
   const tones = {
@@ -44,6 +44,8 @@ export function Badge({
     warn: 'bg-[var(--tone-warn-bg)] text-[var(--tone-warn-fg)]',
     error: 'bg-[var(--tone-error-bg)] text-[var(--tone-error-fg)]',
     violet: 'bg-[var(--tone-think-bg)] text-[var(--tone-think-fg)]',
+    model: 'bg-[var(--tone-model-bg)] text-[var(--tone-model-fg)]',
+    event: 'bg-[var(--tone-event-bg)] text-[var(--tone-event-fg)]',
   };
   return (
     <span

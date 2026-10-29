@@ -1,7 +1,7 @@
 <h1 align="center"><img src="docs/assets/loopprism-logo.png" alt="" width="72" align="absmiddle">&nbsp;LoopPrism</h1>
 
 <p align="center">
-  Claude Code、Codex、OpenCode、DeepSeek Harness、WorkBuddy 的会话检查器：逐步查看每一次会话。<br>
+  Claude Code、Codex、Gemini CLI、OpenCode、DeepSeek Harness、WorkBuddy 的会话检查器：逐步查看每一次会话。<br>
   上下文被什么占满、时间花在哪、花了多少钱。本地优先，零配置。
 </p>
 
@@ -46,7 +46,7 @@
 
 ## 功能
 
-- 🗂 **会话**：读取本机所有 Claude Code、Codex、OpenCode、DeepSeek Harness、WorkBuddy 会话。可搜索全部消息，按日期或项目分组，导出 Markdown。Claude Code 和 Codex 的会话还可以直接恢复、移入回收站；其余应用为只读。
+- 🗂 **会话**：读取本机所有 Claude Code、Codex、Gemini CLI、OpenCode、DeepSeek Harness、WorkBuddy 会话。可搜索全部消息，按日期或项目分组，导出 Markdown。Claude Code 和 Codex 的会话还可以直接恢复、移入回收站；其余应用为只读。
 - 🧭 **轨迹**：每一步（提示词、注入的上下文、思考、工具调用、结果）都在时间线上，带耗时与搜索，并标出重复调用和连续失败。
 - 🧮 **上下文**：模型输入的每一部分来自哪里：系统提示词、工具定义、你的消息、注入内容、技能、工具结果。含窗口占用、趋势和缓存命中率。
 - 💸 **花费**：按各厂商公开的 API 价格，把真实 token 用量换算成美元，可按 token 类型、模型、每一轮拆分。**花费**页汇总所有应用：按天、模型、应用、项目统计，并列出最贵的会话。
@@ -65,6 +65,7 @@ LoopPrism 支持 **macOS** 和 **Windows**，两个平台功能一致。
 |---|---|---|---|
 | **Claude Code** | `~/.claude/projects`（含子代理） | 支持，插件 | 支持 |
 | **Codex** | `~/.codex/sessions` | 支持，`~/.codex/hooks.json` | 支持 |
+| **Gemini CLI** | `~/.gemini/tmp/<项目>/chats`（JSON 与 JSONL），`$GEMINI_CLI_HOME` | 支持，`~/.gemini/settings.json` | 只读 |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | 支持，插件 `~/.config/opencode/plugins` | 只读 |
 | **DeepSeek Harness**（`dsh`） | `~/.dsh/sessions`（zstd），`$DSH_HOME`，以及 DSH Desktop 自己应用数据目录里的 `dsh-desktop/harness/sessions` | 支持，经其钩子插件（需手动一步） | 只读 |
 | **WorkBuddy** | `~/.workbuddy/projects`，`$WORKBUDDY_CONFIG_DIR` | 支持，`~/.workbuddy/settings.json` | 只读 |
@@ -87,14 +88,14 @@ pip install "git+https://github.com/AMark-CS/LoopPrism.git"
 lprism proxy        # 然后打开 http://localhost:8080
 ```
 
-### 为 Claude Code、Codex、WorkBuddy、OpenCode、DeepSeek Harness 开启实时运行
+### 为 Claude Code、Codex、Gemini CLI、WorkBuddy、OpenCode、DeepSeek Harness 开启实时运行
 
 ```bash
 npx loopprism install     # 为你已安装的应用添加 hooks
 lpa status                # 查看最新运行
 ```
 
-Codex 安装后需运行一次 `/hooks` 以信任这些 hooks；WorkBuddy 和 OpenCode 安装后需重启（OpenCode 装的是一个单文件插件）。DeepSeek Harness 需要多一步手动：`lpa install dsh` 会生成 `~/.loopprism/dsh-hooks.json`，再在 DSH Desktop 里安装插件 `dsh-hooks-claude-code`，把它的 `configPath` 设为该文件并重启。详见 [npm/README.md](npm/README.md)。
+Codex 安装后需运行一次 `/hooks` 以信任这些 hooks；WorkBuddy、Gemini CLI 和 OpenCode 安装后需重启（OpenCode 装的是一个单文件插件）。DeepSeek Harness 需要多一步手动：`lpa install dsh` 会生成 `~/.loopprism/dsh-hooks.json`，再在 DSH Desktop 里安装插件 `dsh-hooks-claude-code`，把它的 `configPath` 设为该文件并重启。详见 [npm/README.md](npm/README.md)。
 
 ## 许可证
 

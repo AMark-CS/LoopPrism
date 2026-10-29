@@ -29,6 +29,13 @@ const AGENTS = [
     afterConnect: "Restart OpenCode so it loads the plugin.",
   },
   {
+    id: "gemini",
+    name: "Gemini CLI",
+    blurb:
+      "Records every prompt, tool call and error as a run. Adds hooks to ~/.gemini/settings.json.",
+    afterConnect: "Restart Gemini CLI so it picks up the hooks.",
+  },
+  {
     id: "dsh",
     name: "DeepSeek Harness (DSH Desktop)",
     blurb:
@@ -173,7 +180,7 @@ async function lastSeen(dashboardUrl) {
       } catch {
         continue;
       }
-      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode", dsh: "dsh" }[agent];
+      const key = { "claude-code": "claude", codex: "codex", workbuddy: "workbuddy", opencode: "opencode", dsh: "dsh", gemini: "gemini" }[agent];
       const at = Date.parse(`${String(t.timestamp).replace(" ", "T")}Z`);
       if (key && (!seen[key] || at > seen[key])) seen[key] = at;
     }

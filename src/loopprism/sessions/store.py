@@ -12,7 +12,7 @@ from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Optional
 
-from . import agents, claude_code, codex, dsh, opencode, workbuddy
+from . import agents, claude_code, codex, dsh, gemini, opencode, workbuddy
 from . import models as M
 from .models import ParsedSession, SessionMeta
 
@@ -31,11 +31,11 @@ def codex_root() -> str:
 
 
 # Agents whose sessions are only read: LoopPrism cannot resume or delete them from here.
-READ_ONLY_AGENTS = {"dsh", "workbuddy", "opencode"}
+READ_ONLY_AGENTS = {"dsh", "workbuddy", "opencode", "gemini"}
 
 
 def default_roots() -> dict[str, str]:
-    return {"claude-code": claude_root(), "codex": codex_root(), "dsh": dsh.dsh_root(), "dsh-desktop": dsh.desktop_root(), "workbuddy": workbuddy.workbuddy_root(), "opencode": opencode.opencode_db()}
+    return {"claude-code": claude_root(), "codex": codex_root(), "dsh": dsh.dsh_root(), "dsh-desktop": dsh.desktop_root(), "workbuddy": workbuddy.workbuddy_root(), "opencode": opencode.opencode_db(), "gemini": gemini.gemini_root()}
 
 
 class SessionStore:
@@ -112,11 +112,12 @@ class SessionStore:
         for key in ("dsh", "dsh-desktop"):  # the CLI's folder, and DSH Desktop's own
             found += [(p, "dsh") for p in dsh.discover(self.roots[key])] if self.roots.get(key) else []
         found += [(p, "workbuddy") for p in workbuddy.discover(self.roots["workbuddy"])] if self.roots.get("workbuddy") else []
+        found += [(p, "gemini") for p in gemini.discover(self.roots["gemini"])] if self.roots.get("gemini") else []
         return found
 
     @staticmethod
     def _parser(agent: str):
-        return {"claude-code": claude_code, "codex": codex, "dsh": dsh, "workbuddy": workbuddy, "opencode": opencode}[agent]
+        return {"claude-code": claude_code, "codex": codex, "dsh": dsh, "workbuddy": workbuddy, "opencode": opencode, "gemini": gemini}[agent]
 
     def _sig(self, path: str) -> tuple[float, int]:
         """(mtime, size) that changes when the session does; OpenCode sessions live inside a database."""

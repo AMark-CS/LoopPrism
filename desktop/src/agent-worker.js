@@ -17,6 +17,7 @@ const codex = require(path.join(root, "lib", "codex"));
 const workbuddy = require(path.join(root, "lib", "workbuddy"));
 const opencode = require(path.join(root, "lib", "opencode"));
 const dsh = require(path.join(root, "lib", "dsh"));
+const gemini = require(path.join(root, "lib", "gemini"));
 const { codexHome } = require(path.join(root, "lib", "paths"));
 
 function hasCli(name) {
@@ -66,11 +67,18 @@ function status() {
   } catch (err) {
     out.dsh.error = err.message;
   }
+  out.gemini = { cli: false, found: false, connected: false };
+  try {
+    out.gemini.found = gemini.available();
+    out.gemini.connected = gemini.isInstalled();
+  } catch (err) {
+    out.gemini.error = err.message;
+  }
   return out;
 }
 
 function run(action, target) {
-  const mod = { claude, codex, workbuddy, opencode, dsh }[target];
+  const mod = { claude, codex, workbuddy, opencode, dsh, gemini }[target];
   if (!mod) throw new Error(`unknown app: ${target}`);
   if (action === "install") mod.install();
   else if (action === "uninstall") mod.uninstall();

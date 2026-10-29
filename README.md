@@ -3,7 +3,7 @@
 <p align="center"><strong>See what your coding agents actually do.</strong></p>
 
 <p align="center">
-  An inspector for Claude Code, Codex, OpenCode, DeepSeek Harness and WorkBuddy: every session, step by step.<br>
+  An inspector for Claude Code, Codex, Gemini CLI, OpenCode, DeepSeek Harness and WorkBuddy: every session, step by step.<br>
   What filled the context, where the time went, what it cost. Local-first, zero setup.
 </p>
 
@@ -67,7 +67,7 @@
   <tr>
     <td width="50%" valign="top">
       <h4>🗂 Sessions</h4>
-      Every Claude Code, Codex, OpenCode, DeepSeek Harness (<code>dsh</code>) and WorkBuddy session on your
+      Every Claude Code, Codex, Gemini CLI, OpenCode, DeepSeek Harness (<code>dsh</code>) and WorkBuddy session on your
       machine. Search all messages, group by day or project, export to Markdown. Claude Code and
       Codex sessions can also be resumed in a terminal or moved to the Trash from here; the other
       others are read-only.
@@ -138,6 +138,7 @@ LoopPrism runs on **macOS** and **Windows** with the same features on both: the 
 |---|---|---|---|
 | **Claude Code** | `~/.claude/projects` (also subagent trees) | yes, plugin | yes |
 | **Codex** | `~/.codex/sessions` | yes, `~/.codex/hooks.json` | yes |
+| **Gemini CLI** | `~/.gemini/tmp/<project>/chats` (JSON and JSONL), `$GEMINI_CLI_HOME` | yes, `~/.gemini/settings.json` | read-only |
 | **OpenCode** | `~/.local/share/opencode/opencode.db` | yes, a plugin in `~/.config/opencode/plugins` | read-only |
 | **DeepSeek Harness** (`dsh`) | `~/.dsh/sessions` (zstd), `$DSH_HOME`, and DSH Desktop's own `dsh-desktop/harness/sessions` in its app-data folder | yes, via its hook plugin (one manual step) | read-only |
 | **WorkBuddy** | `~/.workbuddy/projects`, `$WORKBUDDY_CONFIG_DIR` | yes, `~/.workbuddy/settings.json` | read-only |
@@ -188,13 +189,13 @@ lprism proxy                                                    # then open http
 Sessions are read after the fact. To also watch an agent **as it works**:
 
 ```bash
-npx loopprism install     # adds the hooks to Claude Code, Codex, WorkBuddy, OpenCode and/or DeepSeek Harness, whichever you have
+npx loopprism install     # adds the hooks to Claude Code, Codex, Gemini CLI, WorkBuddy, OpenCode and/or DeepSeek Harness, whichever you have
 lpa status                # newest runs
 ```
 
 Claude Code can also use the plugin directly (`/plugin marketplace add AMark-CS/LoopPrism`, then
 `/plugin install loopprism@loopprism`). In Codex, run `/hooks` once to trust the hooks; restart
-WorkBuddy and OpenCode after installing (OpenCode gets a one-file plugin). DeepSeek Harness sessions are read from `~/.dsh` (or `$DSH_HOME`) and from DSH Desktop's own data folder, and
+WorkBuddy, Gemini CLI and OpenCode after installing (OpenCode gets a one-file plugin). DeepSeek Harness sessions are read from `~/.dsh` (or `$DSH_HOME`) and from DSH Desktop's own data folder, and
 WorkBuddy's from `~/.workbuddy` (or `$WORKBUDDY_CONFIG_DIR`), and OpenCode's from its database, with
 nothing to set up. For live runs, DeepSeek Harness needs one manual step: `lpa install dsh` writes `~/.loopprism/dsh-hooks.json`; in DSH Desktop install the plugin `dsh-hooks-claude-code`, set its `configPath` to that file and restart. Privacy options and uninstall: [npm/README.md](npm/README.md).
 

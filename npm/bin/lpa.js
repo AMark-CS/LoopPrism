@@ -8,6 +8,7 @@ const codex = require('../lib/codex');
 const workbuddy = require('../lib/workbuddy');
 const opencode = require('../lib/opencode');
 const dsh = require('../lib/dsh');
+const gemini = require('../lib/gemini');
 const { configPath } = require('../plugin/scripts/config');
 const viewer = require('../plugin/scripts/viewer');
 const { version } = require('../package.json');
@@ -15,7 +16,7 @@ const { version } = require('../package.json');
 const HELP = `lpa ${version}: LoopPrism for Claude Code and Codex
 
 Usage
-  lpa install [claude|codex|workbuddy|opencode|dsh|all] [--url <api-url>]   add the hooks (default: all that are found)
+  lpa install [claude|codex|workbuddy|opencode|dsh|gemini|all] [--url <api-url>]   add the hooks (default: all that are found)
   lpa uninstall [claude|codex|workbuddy|opencode|dsh|all]                   remove them
   lpa status                                         is LoopPrism up? latest runs
   lpa open                                           open the desktop app or dashboard
@@ -42,6 +43,7 @@ function pick(targets) {
     workbuddy: all || targets.includes('workbuddy'),
     opencode: all || targets.includes('opencode'),
     dsh: all || targets.includes('dsh'),
+    gemini: all || targets.includes('gemini'),
     explicit: !all,
   };
 }
@@ -118,6 +120,20 @@ async function main(argv) {
         console.log('                  In DSH Desktop, install the plugin dsh-hooks-claude-code, set its configPath to that file, and restart.');
       }
     }
+    if (want.gemini) {
+      if (!gemini.available() && !want.explicit) {
+        console.log('Gemini CLI: not found (no ~/.gemini), skipped.');
+      } else {
+        try {
+          const r = gemini.install();
+          console.log(`Gemini CLI: hooks written to ${r.file}`);
+          console.log('            Restart Gemini CLI so it picks them up. Node.js must be on its PATH.');
+        } catch (err) {
+          console.error(`Gemini CLI: ${err.message}`);
+          failed = true;
+        }
+      }
+    }
     console.log('\nNext: start LoopPrism (desktop app, or `lprism proxy`), then use your agent. `lpa status` shows the runs.');
     return failed ? 1 : 0;
   }
@@ -128,6 +144,7 @@ async function main(argv) {
     if (want.workbuddy && workbuddy.available()) workbuddy.uninstall();
     if (want.opencode) opencode.uninstall();
     if (want.dsh) dsh.uninstall();
+    if (want.gemini && gemini.available()) gemini.uninstall();
     console.log('LoopPrism hooks removed.');
     return 0;
   }

@@ -111,3 +111,39 @@ test('dsh writes a hooks file the bridge can run, and uninstall keeps scripts an
   codex.uninstall({ home, env });
   assert.equal(fs.existsSync(path.join(home, '.loopprism', 'hooks')), false);
 });
+
+test('gemini: hooks go into ~/.gemini/settings.json in its own event names and milliseconds, idempotently', () => {
+  const gemini = require('../lib/gemini');
+  const home = tmp();
+  const file = path.join(home, '.gemini', 'settings.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const mine = { type: 'command', command: 'echo mine' };
+  fs.writeFileSync(file, JSON.stringify({ ui: { theme: 'x' }, hooks: { AfterAgent: [{ hooks: [mine] }] } }));
+  gemini.install({ home, env: {} });
+  gemini.install({ home, env: {} });
+  const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.equal(cfg.ui.theme, 'x');
+  assert.deepEqual(Object.keys(cfg.hooks).sort(), ['AfterAgent', 'AfterTool', 'BeforeAgent', 'SessionEnd', 'SessionStart']);
+  assert.equal(cfg.hooks.AfterAgent.length, 2); // ours, once, next to the user's
+  assert.deepEqual(cfg.hooks.AfterAgent[0].hooks, [mine]);
+  const ours = cfg.hooks.AfterTool[0].hooks[0];
+  assert.match(ours.command, /--agent gemini$/);
+  assert.equal(ours.timeout, 5000);
+  assert.equal(gemini.isInstalled({ home, env: {} }), true);
+  gemini.uninstall({ home, env: {} });
+  const after = JSON.parse(fs.readFileSync(file, 'utf8'));
+  assert.deepEqual(Object.keys(after.hooks), ['AfterAgent']);
+  assert.deepEqual(after.hooks.AfterAgent[0].hooks, [mine]);
+});
+
+test('hook.js understands Gemini CLI events, including a tool that failed', () => {
+  const { buildEvent } = require('../plugin/scripts/hook');
+  const base = { session_id: 's', cwd: '/w' };
+  assert.equal(buildEvent({ ...base, hook_event_name: 'BeforeAgent', prompt: 'hi' }, 'gemini').event, 'prompt');
+  const ok = buildEvent({ ...base, hook_event_name: 'AfterTool', tool_name: 'read_file', tool_input: { a: 1 }, tool_response: { llmContent: 'x' } }, 'gemini');
+  assert.equal(ok.event, 'tool');
+  const bad = buildEvent({ ...base, hook_event_name: 'AfterTool', tool_name: 'read_file', tool_input: {}, tool_response: { error: { message: 'nope' } } }, 'gemini');
+  assert.equal(bad.event, 'tool_failure');
+  assert.equal(bad.error, 'nope');
+  assert.equal(buildEvent({ ...base, hook_event_name: 'AfterAgent' }, 'gemini').event, 'stop');
+});
