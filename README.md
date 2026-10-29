@@ -134,14 +134,14 @@
 
 <table>
   <tr>
-    <td align="center" width="25%"><img src="docs/assets/apps/claude-code.svg" width="72" alt="Claude Code"><br><b>Claude Code</b></td>
-    <td align="center" width="25%"><img src="docs/assets/apps/codex.svg" width="72" alt="Codex"><br><b>Codex</b></td>
-    <td align="center" width="25%"><img src="docs/assets/apps/gemini-cli.svg" width="72" alt="Gemini CLI"><br><b>Gemini CLI</b></td>
-    <td align="center" width="25%"><img src="docs/assets/apps/opencode.svg" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/claude-code.png" width="72" alt="Claude Code"><br><b>Claude Code</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/codex.png" width="72" alt="Codex"><br><b>Codex</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/gemini-cli.png" width="72" alt="Gemini CLI"><br><b>Gemini CLI</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/opencode.png" width="72" alt="OpenCode"><br><b>OpenCode</b></td>
   </tr>
   <tr>
-    <td align="center" width="25%"><img src="docs/assets/apps/deepseek-harness.svg" width="72" alt="DeepSeek Harness"><br><b>DeepSeek Harness</b></td>
-    <td align="center" width="25%"><img src="docs/assets/apps/workbuddy.svg" width="72" alt="WorkBuddy"><br><b>WorkBuddy</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/deepseek-harness.png" width="72" alt="DeepSeek Harness"><br><b>DeepSeek Harness</b></td>
+    <td align="center" width="25%"><img src="docs/assets/apps/workbuddy.png" width="72" alt="WorkBuddy"><br><b>WorkBuddy</b></td>
     <td align="center" width="25%"><img src="docs/assets/apps/more.svg" width="72" alt="More apps coming"><br><a href="https://github.com/AMark-CS/LoopPrism/issues">More apps coming</a></td>
     <td></td>
   </tr>
