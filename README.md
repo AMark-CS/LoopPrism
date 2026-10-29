@@ -17,12 +17,20 @@
 </p>
 
 <p align="center">
+  <b>English</b> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/AMark-CS/LoopPrism/releases/latest"><b>Download</b></a> ·
   <a href="#features">Features</a> ·
   <a href="#get-started">Get started</a>
 </p>
 
 <br>
+
+<p align="center">
+  <img src="docs/assets/loopprism-tour.gif" alt="A tour of LoopPrism: Chat, Trajectory, Context, Agents and Cost" width="860">
+</p>
 
 <table>
   <tr>
