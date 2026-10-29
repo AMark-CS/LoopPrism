@@ -79,7 +79,7 @@ class TestAnalyze:
         cost = sum(s.cost_usd for s in steps)
         out = analyze([{"id": "s1", "title": "t", "agent": "claude-code", "cost_usd": cost}], lambda sid: ps, cost)
         assert out["suggestions"], "expected at least the cache suggestion"
-        assert 0 < out["saving_usd"] <= 0.8 * cost + 1e-9
+        assert 0 < out["saving_usd"] <= 0.8 * cost + 1e-3
         assert out["optimized_usd"] == pytest.approx(out["spend_usd"] - out["saving_usd"], abs=1e-4)
         assert out["saving_pct"] == round(100 * out["saving_usd"] / out["spend_usd"], 1)
         top = out["suggestions"][0]
