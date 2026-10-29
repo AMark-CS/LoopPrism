@@ -309,7 +309,9 @@ async function runTour(dir) {
   };
   while (status.state !== "running") await wait(250);
   showWindow();
-  win.setSize(1280, 820);
+  const [tw, th] = (process.env.LPRISM_TOUR_SIZE || "1280x820").split("x").map(Number);
+  win.setSize(tw, th);
+  win.webContents.setZoomFactor(Number(process.env.LPRISM_TOUR_ZOOM || 1));
   await wait(2500);
   for (const tab of ["sessions", "live", "apps", "settings"]) {
     showWindow(tab);

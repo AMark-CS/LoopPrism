@@ -19,7 +19,13 @@ MODEL = "claude-sonnet-5-5"
 PROJECT = "-work-app"
 
 
+# LP_DEMO_SCALE multiplies every token count, so a demo (README screenshots) shows realistic
+# costs instead of "<$0.01". Tests leave it at 1.
+SCALE = int(os.environ.get("LP_DEMO_SCALE", "1"))
+
+
 def u(inp=100, out=40, read=2000):
+    inp, out, read = inp * SCALE, out * SCALE, read * SCALE
     return {"input_tokens": inp, "output_tokens": out, "cache_read_input_tokens": read,
             "cache_creation": {"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": 0}}
 
